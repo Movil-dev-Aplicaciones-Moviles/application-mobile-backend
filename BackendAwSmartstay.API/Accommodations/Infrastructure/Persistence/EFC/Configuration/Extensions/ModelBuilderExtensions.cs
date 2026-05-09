@@ -3,6 +3,7 @@ using BackendAwSmartstay.API.Accommodations.Domain.Model.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace BackendAwSmartstay.API.Accommodations.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
@@ -136,7 +137,7 @@ public static class ModelBuilderExtensions
                 Description = "Historic hotel in the center of Lima.",
                 ImageUrl = "https://placehold.co/600x400/3498DB/FFFFFF?text=Bolivar",
                 Type = "Hotel",
-                Amenities = "[\"Wifi\", \"Restaurante\", \"Bar\"]" // JSON String required for seed with converter
+                Amenities = new List<string> { "Wifi", "Restaurante", "Bar" }
             },
             new {
                 Id = 2,
@@ -148,7 +149,7 @@ public static class ModelBuilderExtensions
                 Description = "Experience the mystic energy of the Andes.",
                 ImageUrl = "https://placehold.co/600x400/E67E22/FFFFFF?text=Andean",
                 Type = "Lodge",
-                Amenities = "[\"Desayuno\", \"Wifi\", \"Gimnasio\"]"
+                Amenities = new List<string> { "Desayuno", "Wifi", "Gimnasio" }
             }
         );
 
@@ -161,7 +162,7 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 1,
                 Price = 85.00m,
                 Description = "Room 101 - Standard view.",
-                Amenities = "[\"Wifi\", \"TV\"]"
+                Amenities = new List<string> { "Wifi", "TV" }
             },
             new {
                 Id = 102,
@@ -169,7 +170,7 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 2,
                 Price = 150.00m,
                 Description = "Room 102 - Plaza view with balcony.",
-                Amenities = "[\"Wifi\", \"TV\", \"Minibar\"]"
+                Amenities = new List<string> { "Wifi", "TV", "Minibar" }
             },
             // Rooms for Hotel 2 (Cusco)
             new {
@@ -178,7 +179,7 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 3,
                 Price = 320.00m,
                 Description = "Suite 201 - Panoramic mountain view.",
-                Amenities = "[\"Jacuzzi\", \"Wifi\", \"Desayuno\", \"Chimenea\"]"
+                Amenities = new List<string> { "Jacuzzi", "Wifi", "Desayuno", "Chimenea" }
             }
         );
     }

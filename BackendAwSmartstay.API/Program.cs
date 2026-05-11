@@ -12,7 +12,7 @@ using BackendAwSmartstay.API.shared.Infrastructure.Persistence.EFC.Configuration
 using BackendAwSmartstay.API.Analytics.Infrastructure.Interfaces.ASP.Configuration.Extensions;
 using DotNetEnv;
 
-Env.Load();
+// Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

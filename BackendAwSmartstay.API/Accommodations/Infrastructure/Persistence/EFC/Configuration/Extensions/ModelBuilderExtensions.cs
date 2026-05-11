@@ -120,9 +120,9 @@ public static class ModelBuilderExtensions
         
         // Seed Room Types
         builder.Entity<RoomType>().HasData(
-            new { Id = 1, Name = "Single Standard", Description = "Cozy room for solo travelers." },
-            new { Id = 2, Name = "Double Deluxe", Description = "Spacious room for couples or business." },
-            new { Id = 3, Name = "Presidential Suite", Description = "Luxury suite with best views." }
+            new RoomType { Id = 1, Name = "Single Standard", Description = "Cozy room for solo travelers." },
+            new RoomType { Id = 2, Name = "Double Deluxe", Description = "Spacious room for couples or business." },
+            new RoomType { Id = 3, Name = "Presidential Suite", Description = "Luxury suite with best views." }
         );
 
         // Seed Hotels

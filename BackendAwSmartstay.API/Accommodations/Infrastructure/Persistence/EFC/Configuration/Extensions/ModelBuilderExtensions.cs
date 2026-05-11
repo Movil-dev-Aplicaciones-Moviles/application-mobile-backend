@@ -3,7 +3,6 @@ using BackendAwSmartstay.API.Accommodations.Domain.Model.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
-using System.Collections.Generic;
 
 namespace BackendAwSmartstay.API.Accommodations.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
@@ -120,9 +119,9 @@ public static class ModelBuilderExtensions
         
         // Seed Room Types
         builder.Entity<RoomType>().HasData(
-            new RoomType { Id = 1, Name = "Single Standard", Description = "Cozy room for solo travelers." },
-            new RoomType { Id = 2, Name = "Double Deluxe", Description = "Spacious room for couples or business." },
-            new RoomType { Id = 3, Name = "Presidential Suite", Description = "Luxury suite with best views." }
+            new { Id = 1, Name = "Single Standard", Description = "Cozy room for solo travelers." },
+            new { Id = 2, Name = "Double Deluxe", Description = "Spacious room for couples or business." },
+            new { Id = 3, Name = "Presidential Suite", Description = "Luxury suite with best views." }
         );
 
         // Seed Hotels
@@ -137,7 +136,8 @@ public static class ModelBuilderExtensions
                 Description = "Historic hotel in the center of Lima.",
                 ImageUrl = "https://placehold.co/600x400/3498DB/FFFFFF?text=Bolivar",
                 Type = "Hotel",
-                Amenities = "[\"Wifi\",\"Restaurante\",\"Bar\"]"            },
+                Amenities = "[\"Wifi\", \"Restaurante\", \"Bar\"]" // JSON String required for seed with converter
+            },
             new {
                 Id = 2,
                 HostId = 1,
@@ -148,7 +148,8 @@ public static class ModelBuilderExtensions
                 Description = "Experience the mystic energy of the Andes.",
                 ImageUrl = "https://placehold.co/600x400/E67E22/FFFFFF?text=Andean",
                 Type = "Lodge",
-                Amenities = "[\"Desayuno\",\"Wifi\",\"Gimnasio\"]"            }
+                Amenities = "[\"Desayuno\", \"Wifi\", \"Gimnasio\"]"
+            }
         );
 
         // Seed Rooms
@@ -160,7 +161,7 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 1,
                 Price = 85.00m,
                 Description = "Room 101 - Standard view.",
-                Amenities = "[\"Wifi\",\"TV\"]"
+                Amenities = "[\"Wifi\", \"TV\"]"
             },
             new {
                 Id = 102,
@@ -168,7 +169,8 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 2,
                 Price = 150.00m,
                 Description = "Room 102 - Plaza view with balcony.",
-                Amenities = "[\"Wifi\",\"TV\",\"Minibar\"]"            },
+                Amenities = "[\"Wifi\", \"TV\", \"Minibar\"]"
+            },
             // Rooms for Hotel 2 (Cusco)
             new {
                 Id = 201,
@@ -176,7 +178,8 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 3,
                 Price = 320.00m,
                 Description = "Suite 201 - Panoramic mountain view.",
-                Amenities = "[\"Jacuzzi\",\"Wifi\",\"Desayuno\",\"Chimenea\"]"            }
+                Amenities = "[\"Jacuzzi\", \"Wifi\", \"Desayuno\", \"Chimenea\"]"
+            }
         );
     }
 }

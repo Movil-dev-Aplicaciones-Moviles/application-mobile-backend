@@ -19,9 +19,9 @@ public interface IUserRepository : IBaseRepository<User>
     Task<User?> FindByUsernameAsync(string username);
 
     /// <summary>
-    ///     Check if a user exists by username
+    ///     Checks asynchronously whether a user with the given username exists.
     /// </summary>
     /// <param name="username">The username to search</param>
-    /// <returns>True if the user exists, false otherwise</returns>
-    bool ExistsByUsername(string username);
+    /// <returns>True if the user exists, false otherwise.</returns>
+    Task<bool> ExistsByUsernameAsync(string username);
 }

@@ -13,8 +13,9 @@ public static class AuthenticatedUserResourceFromEntityAssembler
     /// </summary>
     /// <param name="user">The user entity.</param>
     /// <param name="token">The generated token.</param>
-    /// <returns>The authenticated resource with role information.</returns>
+    /// <returns>The authenticated resource with user and token information.</returns>
     public static AuthenticatedUserResource ToResourceFromEntity(User user, string token)
     {
-        return new AuthenticatedUserResource(user.Id, user.Username, token, user.Role);    }
+        return new AuthenticatedUserResource(user.Id, user.Username, token);
+    }
 }

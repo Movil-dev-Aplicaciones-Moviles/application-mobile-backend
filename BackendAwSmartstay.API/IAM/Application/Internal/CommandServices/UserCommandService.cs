@@ -1,6 +1,7 @@
 using BackendAwSmartstay.API.IAM.Application.OutboundServices;
 using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Commands;
+using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
 using BackendAwSmartstay.API.IAM.Domain.Repositories;
 using BackendAwSmartstay.API.IAM.Domain.Services;
 using BackendAwSmartstay.API.Shared.Domain.Repositories;
@@ -45,13 +46,13 @@ public class UserCommandService(
     /// <exception cref="Exception">Thrown if the username is already taken.</exception>
     public async Task Handle(SignUpCommand command)
     {
-        if (userRepository.ExistsByUsername(command.Username))
+        if (await userRepository.ExistsByUsernameAsync(command.Username))
             throw new Exception($"Username {command.Username} is already taken");
 
         var hashedPassword = hashingService.HashPassword(command.Password);
         
-        // Ahora pasamos el ROL al crear el usuario
-        var user = new User(command.Username, hashedPassword, command.Role); 
+        // New users are assigned the Guest role by default
+        var user = new User(command.Username, hashedPassword, UserRoles.Guest); 
         
         try
         {
@@ -61,6 +62,34 @@ public class UserCommandService(
         catch (Exception e)
         {
             throw new Exception($"An error occurred while creating user: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Processes a password change request.
+    /// </summary>
+    /// <param name="command">The command containing the authenticated user id and password values.</param>
+    /// <exception cref="Exception">Thrown if the user is not found, the current password is invalid, or persistence fails.</exception>
+    public async Task Handle(global::BackendAwSmartstay.API.IAM.Domain.Model.Commands.ChangePasswordCommand command)
+    {
+        var user = await userRepository.FindByIdAsync(command.UserId);
+
+        if (user == null)
+            throw new Exception($"User with id '{command.UserId}' not found");
+
+        if (!hashingService.VerifyPassword(command.CurrentPassword, user.PasswordHash))
+            throw new Exception("Current password is invalid");
+
+        var newHashedPassword = hashingService.HashPassword(command.NewPassword);
+        user.UpdatePasswordHash(newHashedPassword);
+
+        try
+        {
+            await unitOfWork.CompleteAsync();
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"An error occurred while updating password: {e.Message}");
         }
     }
 }

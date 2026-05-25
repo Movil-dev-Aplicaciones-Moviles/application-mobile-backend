@@ -7,12 +7,10 @@ using BackendAwSmartstay.API.Shared.Infrastructure.Interfaces.ASP.Configuration.
 using BackendAwSmartstay.API.Shared.Infrastructure.Mediator.Cortex.Configuration.Extensions;
 using BackendAwSmartstay.API.IAM.Infrastructure.Interfaces.ASP.Configuration.Extensions;
 using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Extensions;
+using BackendAwSmartstay.API.IAM.Infrastructure.Extensions;
 using BackendAwSmartstay.API.Profiles.Infrastructure.Interfaces.ASP.Configuration.Extensions;
 using BackendAwSmartstay.API.shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using BackendAwSmartstay.API.Analytics.Infrastructure.Interfaces.ASP.Configuration.Extensions;
-using DotNetEnv;
-
-// Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +42,7 @@ builder.AddCortexMediatorServices();
 var app = builder.Build();
 
 app.EnsureDatabaseCreated();
+await app.SeedDatabaseAsync();
 
 // Swagger
 app.UseOpenApiConfiguration();

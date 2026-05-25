@@ -12,6 +12,13 @@ namespace BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attribut
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public class AuthorizeAttribute : Attribute, IAuthorizationFilter
 {
+    private readonly string[] _roles;
+
+    public AuthorizeAttribute(params string[] roles)
+    {
+        _roles = roles;
+    }
+
     /**
      * <summary>
      *     This method is called when authorization is required.
@@ -23,17 +30,21 @@ public class AuthorizeAttribute : Attribute, IAuthorizationFilter
     public void OnAuthorization(AuthorizationFilterContext context)
     {
         var allowAnonymous = context.ActionDescriptor.EndpointMetadata.OfType<AllowAnonymousAttribute>().Any();
+        if (allowAnonymous) return;
 
-        if (allowAnonymous)
+        var user = (User?)context.HttpContext.Items["User"];
+
+        if (user == null)
         {
-            Console.WriteLine(" Skipping authorization");
+            context.Result = new UnauthorizedResult();
             return;
         }
 
-        // verify if a user is signed in by checking if HttpContext.User is set
-        var user = (User?)context.HttpContext.Items["User"];
+        if (_roles.Length == 0) return;
 
-        // if a user is not signed in, then return 401-status code
-        if (user == null) context.Result = new UnauthorizedResult();
+        var hasAllowedRole = _roles.Any(role =>
+            string.Equals(role, user.Role, StringComparison.OrdinalIgnoreCase));
+
+        if (!hasAllowedRole) context.Result = new ForbidResult();
     }
 }

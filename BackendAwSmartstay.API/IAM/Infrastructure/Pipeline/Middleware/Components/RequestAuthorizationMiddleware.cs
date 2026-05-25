@@ -5,71 +5,86 @@ using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
 
 namespace BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Components;
 
-/**
- * RequestAuthorizationMiddleware is a custom middleware.
- * This middleware is used to authorize requests.
- * It validates a token is included in the request header and that the token is valid.
- * If the token is valid then it sets the user in HttpContext.Items["User"].
- */
-public class RequestAuthorizationMiddleware(RequestDelegate next)
+/// <summary>
+///     Custom HTTP pipeline middleware responsible for intercepting incoming requests,
+///     validating JSON Web Tokens (JWT), and injecting the authenticated User aggregate
+///     into the current HTTP context items for downstream authorization filters.
+/// </summary>
+/// <remarks>
+///     This middleware follows a passive authentication strategy, delegating access rejection 
+///     responsibilities to role-based authorization attributes. It utilizes structured logging
+///     to audit authentication states without polluting the production environment.
+/// </remarks>
+/// <param name="next">The next delegate pointer in the ASP.NET Core application pipeline.</param>
+/// <param name="logger">The structured logger instance dedicated to tracking identity verification events.</param>
+public class RequestAuthorizationMiddleware(
+    RequestDelegate next,
+    ILogger<RequestAuthorizationMiddleware> logger)
 {
-    /**
-     * InvokeAsync is called by the ASP.NET Core runtime.
-     * It is used to authorize requests.
-     * It validates a token is included in the request header and that the token is valid.
-     * If the token is valid then it sets the user in HttpContext.Items["User"].
-     */
+    /// <summary>
+    ///     Executes the middleware logic for processing the token verification flow.
+    /// </summary>
+    /// <param name="context">The current <see cref="HttpContext"/> of the executing request.</param>
+    /// <param name="userQueryService">The domain query service used to retrieve user aggregates.</param>
+    /// <param name="tokenService">The outbound service handling token parsing and validation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task InvokeAsync(
         HttpContext context,
         IUserQueryService userQueryService,
         ITokenService tokenService)
     {
-        Console.WriteLine("Entering InvokeAsync");
-        var endpoint = context.GetEndpoint();
+        logger.LogDebug("Entering RequestAuthorizationMiddleware pipeline invocation.");
         
+        var endpoint = context.GetEndpoint();
         if (endpoint == null)
         {
-            Console.WriteLine("Endpoint is null (Ghost). Skipping authorization.");
+            logger.LogDebug("Execution endpoint is null. Bypassing identity extraction pipeline.");
             await next(context);
             return;
         }
         
-        // skip authorization if endpoint is decorated with [AllowAnonymous] attribute
-        var allowAnonymous = endpoint.Metadata
-            .Any(m => m.GetType() == typeof(AllowAnonymousAttribute));
-        Console.WriteLine($"Allow Anonymous is {allowAnonymous}");
+        var allowAnonymous = endpoint.Metadata.Any(metadata => 
+            metadata.GetType() == typeof(AllowAnonymousAttribute) ||
+            metadata is Microsoft.AspNetCore.Authorization.IAllowAnonymous);
+        
         if (allowAnonymous)
         {
-            Console.WriteLine("Skipping authorization");
-            // [AllowAnonymous] attribute is set, so skip authorization
+            logger.LogInformation("Endpoint is explicitly marked to allow anonymous access. Skipping validation.");
             await next(context);
             return;
         }
 
-        Console.WriteLine("Entering authorization");
-        // get token from request header
         var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
 
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            logger.LogDebug("No authorization header token detected. Handing context execution over to authorization filters.");
+            await next(context);
+            return;
+        }
 
-        // if token is null then throw exception
-        if (token == null) throw new Exception("Null or invalid token");
-
-        // validate token
         var userId = await tokenService.ValidateToken(token);
 
-        // if token is invalid then throw exception
-        if (userId == null) throw new Exception("Invalid token");
+        if (userId == null)
+        {
+            logger.LogWarning("Identity validation failed: The provided token is malformed, invalid, or expired.");
+            await next(context);
+            return;
+        }
 
-        // get user by id
         var getUserByIdQuery = new GetUserByIdQuery(userId.Value);
-
-        // set user in HttpContext.Items["User"]
-
         var user = await userQueryService.Handle(getUserByIdQuery);
-        Console.WriteLine("Successful authorization. Updating Context...");
-        context.Items["User"] = user;
-        Console.WriteLine("Continuing with Middleware Pipeline");
-        // call next middleware
+
+        if (user != null)
+        {
+            logger.LogInformation("Successful identity verification for user ID: {UserId} with associated Role: {Role}.", user.Id, user.Role);
+            context.Items["User"] = user;
+        }
+        else
+        {
+            logger.LogError("Critical Security Inconsistency: Token signature is valid for user ID {UserId}, but the corresponding User aggregate does not exist in the persistence layer.", userId.Value);
+        }
+
         await next(context);
     }
 }

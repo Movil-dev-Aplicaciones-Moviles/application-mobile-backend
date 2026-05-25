@@ -12,9 +12,9 @@ public static class SignUpCommandFromResourceAssembler
     ///     Converts the resource to a domain command.
     /// </summary>
     /// <param name="resource">The sign-up resource.</param>
-    /// <returns>The command including the role.</returns>
+    /// <returns>The command for user registration.</returns>
     public static SignUpCommand ToCommandFromResource(SignUpResource resource)
     {
-        return new SignUpCommand(resource.Username, resource.Password, resource.Role);
+        return new SignUpCommand(resource.Username, resource.Password);
     }
 }

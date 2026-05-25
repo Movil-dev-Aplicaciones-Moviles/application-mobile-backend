@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
 
 namespace BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 
@@ -23,12 +24,15 @@ public class User
         PasswordHash = passwordHash;
         Role = role;
     }
-
+    /// <summary>
+    ///     Required by Entity Framework Core for materialization.
+    ///     Protected to enforce the use of the parameterized constructor in application code.
+    /// </summary>
     public User() 
     {
         Username = string.Empty;
         PasswordHash = string.Empty;
-        Role = "guest"; // Default role
+        Role = UserRoles.Guest;
     }
 
     /// <summary>
@@ -70,6 +74,9 @@ public class User
     /// <returns>The updated user instance.</returns>
     public User UpdatePasswordHash(string passwordHash)
     {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash cannot be empty.", nameof(passwordHash));
+
         PasswordHash = passwordHash;
         return this;
     }

@@ -26,8 +26,16 @@ public interface IUserCommandService
         * <summary>
         *     Handle sign up command
         * </summary>
-        * <param name="command">The sign up command</param>
+        * <param name="command">The sign-up command</param>
         * <returns>A confirmation message on successful creation.</returns>
         */
     Task Handle(SignUpCommand command);
+
+    /**
+        * <summary>
+        *     Handle change password command
+        * </summary>
+        * <param name="command">The change password command</param>
+        */
+    Task Handle(ChangePasswordCommand command);
 }

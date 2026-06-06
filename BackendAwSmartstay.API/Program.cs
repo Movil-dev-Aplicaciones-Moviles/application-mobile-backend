@@ -39,6 +39,12 @@ builder.AddAnalyticsContextServices();
 // Mediator
 builder.AddCortexMediatorServices();
 
+//new implementation 
+builder.Services.AddHealthChecks()
+    .AddMySql(builder.Configuration.GetConnectionString("DefaultConnection")!, 
+        name: "mysql-db-check", 
+        tags: new[] { "database" });
+
 var app = builder.Build();
 
 app.EnsureDatabaseCreated();
@@ -54,5 +60,8 @@ app.UseHttpsRedirection();
 app.UseRequestAuthorization();
 
 app.MapControllers();
+
+// new implementation
+app.MapHealthChecks("/health");
 
 app.Run();

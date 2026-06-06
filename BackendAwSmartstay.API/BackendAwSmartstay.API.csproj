@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <!-- Dependency Injection related packages -->
+        <PackageReference Include="AspNetCore.HealthChecks.MySql" Version="9.0.0" />
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
         <!-- EntityFrameworkCore Database Persistence related packages -->

@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BackendAwSmartstay.API.shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
+/// <summary>
+/// Provides extension methods for <see cref="WebApplicationBuilder"/> to configure persistence-related services.
+/// </summary>
 public static class WebApplicationBuilderExtensions
 {
     public static void AddDatabaseConfigurationServices(this WebApplicationBuilder builder)

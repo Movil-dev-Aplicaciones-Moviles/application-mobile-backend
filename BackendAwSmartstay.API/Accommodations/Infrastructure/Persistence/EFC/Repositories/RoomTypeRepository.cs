@@ -6,4 +6,3 @@ using BackendAwSmartstay.API.Shared.Infrastructure.Persistence.EFC.Repositories;
 namespace BackendAwSmartstay.API.Accommodations.Infrastructure.Persistence.EFC.Repositories;
 
 public class RoomTypeRepository(AppDbContext context) : BaseRepository<RoomType>(context), IRoomTypeRepository;
-

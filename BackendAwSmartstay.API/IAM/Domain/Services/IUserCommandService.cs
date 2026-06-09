@@ -14,28 +14,28 @@ namespace BackendAwSmartstay.API.IAM.Domain.Services;
 public interface IUserCommandService
 {
     /**
-        * <summary>
-        *     Handle sign in command
-        * </summary>
-        * <param name="command">The sign in command</param>
-        * <returns>The authenticated user and the JWT token</returns>
-        */
+     * <summary>
+     *     Handle sign in command
+     * </summary>
+     * <param name="command">The sign in command</param>
+     * <returns>The authenticated user and the JWT token</returns>
+     */
     Task<(User user, string token)> Handle(SignInCommand command);
 
     /**
-        * <summary>
-        *     Handle sign up command
-        * </summary>
-        * <param name="command">The sign-up command</param>
-        * <returns>A confirmation message on successful creation.</returns>
-        */
+     * <summary>
+     *     Handle sign up command
+     * </summary>
+     * <param name="command">The sign-up command</param>
+     * <returns>A confirmation message on successful creation.</returns>
+     */
     Task Handle(SignUpCommand command);
 
     /**
-        * <summary>
-        *     Handle change password command
-        * </summary>
-        * <param name="command">The change password command</param>
-        */
+     * <summary>
+     *     Handle change password command
+     * </summary>
+     * <param name="command">The change password command</param>
+     */
     Task Handle(ChangePasswordCommand command);
 }

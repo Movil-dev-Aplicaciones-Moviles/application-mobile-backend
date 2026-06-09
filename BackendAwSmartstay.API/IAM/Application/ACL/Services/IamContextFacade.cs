@@ -5,8 +5,9 @@ using BackendAwSmartstay.API.IAM.Interfaces.ACL;
 
 namespace BackendAwSmartstay.API.IAM.Application.ACL.Services;
 
-public class IamContextFacade(IUserCommandService userCommandService, IUserQueryService userQueryService)
-    : IIamContextFacade
+public class IamContextFacade(
+    IUserCommandService userCommandService,
+    IUserQueryService userQueryService) : IIamContextFacade
 {
     public async Task<int> CreateUser(string username, string password)
     {

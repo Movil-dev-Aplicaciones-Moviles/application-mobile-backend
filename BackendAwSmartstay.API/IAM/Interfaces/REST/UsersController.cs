@@ -2,6 +2,7 @@ using System.Net.Mime;
 using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Commands;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
+using BackendAwSmartstay.API.IAM.Domain.Model.Exceptions;
 using BackendAwSmartstay.API.IAM.Domain.Model.Queries;
 using BackendAwSmartstay.API.IAM.Domain.Services;
 using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
@@ -34,10 +35,7 @@ public class UsersController(
     /// <returns>The user resource</returns>
     [HttpGet("{id}")]
     [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
-    [SwaggerOperation(
-        Summary = "Get a user by its id",
-        Description = "Get a user by its id",
-        OperationId = "GetUserById")]
+    [SwaggerOperation(Summary = "Get a user by its id", Description = "Get a user by its id", OperationId = "GetUserById")]
     [SwaggerResponse(StatusCodes.Status200OK, "The user was found", typeof(UserResource))]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Missing or invalid JWT Token")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "User does not have required permissions")]
@@ -49,16 +47,14 @@ public class UsersController(
         return Ok(userResource);
     }
 
+
     /// <summary>
     ///     Get all users' endpoint. It allows getting all users
     /// </summary>
     /// <returns>The user resources</returns>
     [HttpGet]
     [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
-    [SwaggerOperation(
-        Summary = "Get all users",
-        Description = "Get all users",
-        OperationId = "GetAllUsers")]
+    [SwaggerOperation(Summary = "Get all users", Description = "Get all users", OperationId = "GetAllUsers")]
     [SwaggerResponse(StatusCodes.Status200OK, "The users were found", typeof(IEnumerable<UserResource>))]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Missing or invalid JWT Token")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "User does not have required permissions")]
@@ -69,6 +65,7 @@ public class UsersController(
         var userResources = users.Select(UserResourceFromEntityAssembler.ToResourceFromEntity);
         return Ok(userResources);
     }
+
 
     /// <summary>
     ///     Changes the password for the authenticated user.
@@ -88,28 +85,24 @@ public class UsersController(
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordResource resource)
     {
         var user = (User?)HttpContext.Items["User"];
-
-        if (user == null)
-            return Unauthorized();
+        if (user == null) return Unauthorized();
 
         var command = new ChangePasswordCommand(user.Id, resource.CurrentPassword, resource.NewPassword);
-
         try
         {
             await userCommandService.Handle(command);
             return Ok("Password updated successfully");
         }
-        catch (Exception e) when (e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        catch (UserNotFoundException e)
         {
             return NotFound(e.Message);
         }
-        catch (Exception e) when (e.Message.Contains("invalid", StringComparison.OrdinalIgnoreCase))
+        catch (InvalidCredentialsException)
         {
             return Unauthorized();
         }
         catch (Exception e)
         {
-            // TODO: Replace string-based exception mapping with dedicated domain exceptions.
             return BadRequest(e.Message);
         }
     }

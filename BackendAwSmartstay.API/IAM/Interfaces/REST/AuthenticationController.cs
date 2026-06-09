@@ -5,6 +5,7 @@ using BackendAwSmartstay.API.IAM.Interfaces.REST.Resources;
 using BackendAwSmartstay.API.IAM.Interfaces.REST.Transform;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using BackendAwSmartstay.API.IAM.Domain.Model.Exceptions;
 
 namespace BackendAwSmartstay.API.IAM.Interfaces.REST;
 
@@ -25,19 +26,24 @@ public class AuthenticationController(IUserCommandService userCommandService) : 
     /// <returns>The authenticated user resource, including a JWT token</returns>
     [HttpPost("sign-in")]
     [AllowAnonymous]
-    [SwaggerOperation(
-        Summary = "Sign in",
-        Description = "Sign in a user",
-        OperationId = "SignIn")]
+    [SwaggerOperation(Summary = "Sign in", Description = "Sign in a user", OperationId = "SignIn")]
     [SwaggerResponse(StatusCodes.Status200OK, "The user was authenticated", typeof(AuthenticatedUserResource))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "Invalid credentials")]
     public async Task<IActionResult> SignIn([FromBody] SignInResource signInResource)
     {
         var signInCommand = SignInCommandFromResourceAssembler.ToCommandFromResource(signInResource);
-        var authenticatedUser = await userCommandService.Handle(signInCommand);
-        var resource =
-            AuthenticatedUserResourceFromEntityAssembler.ToResourceFromEntity(authenticatedUser.user,
-                authenticatedUser.token);
-        return Ok(resource);
+
+        try
+        {
+            var authenticatedUser = await userCommandService.Handle(signInCommand);
+            var resource = AuthenticatedUserResourceFromEntityAssembler.ToResourceFromEntity(
+                authenticatedUser.user, authenticatedUser.token);
+            return Ok(resource);
+        }
+        catch (InvalidCredentialsException)
+        {
+            return Unauthorized();
+        }
     }
 
     /// <summary>
@@ -47,15 +53,21 @@ public class AuthenticationController(IUserCommandService userCommandService) : 
     /// <returns>A confirmation message on successful creation.</returns>
     [HttpPost("sign-up")]
     [AllowAnonymous]
-    [SwaggerOperation(
-        Summary = "Sign-up",
-        Description = "Sign up a new user",
-        OperationId = "SignUp")]
+    [SwaggerOperation(Summary = "Sign-up", Description = "Sign up a new user", OperationId = "SignUp")]
     [SwaggerResponse(StatusCodes.Status200OK, "The user was created successfully")]
+    [SwaggerResponse(StatusCodes.Status409Conflict, "Username already exists")]
     public async Task<IActionResult> SignUp([FromBody] SignUpResource signUpResource)
     {
         var signUpCommand = SignUpCommandFromResourceAssembler.ToCommandFromResource(signUpResource);
-        await userCommandService.Handle(signUpCommand);
-        return Ok(new { message = "User created successfully" });
+
+        try
+        {
+            await userCommandService.Handle(signUpCommand);
+            return Ok(new { message = "User created successfully" });
+        }
+        catch (UsernameAlreadyExistsException e)
+        {
+            return Conflict(new { message = e.Message });
+        }
     }
 }

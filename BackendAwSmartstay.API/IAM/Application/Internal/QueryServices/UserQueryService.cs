@@ -6,39 +6,44 @@ using BackendAwSmartstay.API.IAM.Domain.Services;
 
 namespace BackendAwSmartstay.API.IAM.Application.Internal.QueryServices;
 
-/// <summary>
-///     The user query service implementation class
-/// </summary>
-/// <remarks>
-///     This class is used to handle user queries
-/// </remarks>
-public class UserQueryService(IUserRepository userRepository) : IUserQueryService
+public class UserQueryService(
+    IUserRepository userRepository,
+    IUserScopeService userScopeService) : IUserQueryService
 {
-    /// <summary>
-    ///     Handle get user by id query
-    /// </summary>
-    /// <param name="query">The query object containing the user id to search</param>
-    /// <returns>The user</returns>
     public async Task<User?> Handle(GetUserByIdQuery query)
     {
-        return await userRepository.FindByIdAsync(query.Id);
+        var target = await userRepository.FindByIdAsync(query.Id);
+        if (target == null) return null;
+
+        // Scope verification
+        if (query.ActorUserId.HasValue)
+        {
+            var actor = await userRepository.FindByIdAsync(query.ActorUserId.Value);
+            if (actor == null || !userScopeService.CanAccessUser(actor, target))
+                return null; 
+        }
+
+        return target;
     }
 
-    /// <summary>
-    ///     Handle get all users query
-    /// </summary>
-    /// <param name="query">The query object for getting all users</param>
-    /// <returns>The users</returns>
     public async Task<IEnumerable<User>> Handle(GetAllUsersQuery query)
     {
+        // Mantenido temporalmente por compatibilidad hacia atrás.
+        // MARCADO COMO OBSOLETO.
         return await userRepository.ListAsync();
     }
 
-    /// <summary>
-    ///     Handle get user by username query
-    /// </summary>
-    /// <param name="query">The query object containing the username to search</param>
-    /// <returns>The user</returns>
+    public async Task<IEnumerable<User>> Handle(GetUsersByScopeQuery query)
+    {
+        var actor = await userRepository.FindByIdAsync(query.ActorUserId);
+        if (actor == null) return Enumerable.Empty<User>();
+
+        var allUsers = await userRepository.ListAsync();
+        
+        // Reutilizamos la lógica centralizada del dominio. DDD 10/10.
+        return allUsers.Where(target => userScopeService.CanAccessUser(actor, target));
+    }
+
     public async Task<User?> Handle(GetUserByUsernameQuery query)
     {
         var username = new Username(query.Username);

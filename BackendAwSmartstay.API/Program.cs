@@ -11,6 +11,7 @@ using BackendAwSmartstay.API.IAM.Infrastructure.Extensions;
 using BackendAwSmartstay.API.Profiles.Infrastructure.Interfaces.ASP.Configuration.Extensions;
 using BackendAwSmartstay.API.shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using BackendAwSmartstay.API.Analytics.Infrastructure.Interfaces.ASP.Configuration.Extensions;
+using Microsoft.AspNetCore.RateLimiting;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,8 +47,27 @@ builder.Services.AddHealthChecks()
         name: "mysql-db-check", 
         tags: new[] { "database" });
 
+//redis implementation
+var redisOptions = new ConfigurationOptions
+{
+    EndPoints = { "host.docker.internal:6379" },
+    AbortOnConnectFail = false
+};
+
+//TODO: Search if it's correct de implementation in the archive  - 1. Configuración del Rate Limiting (P1)
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("AuthLimiter", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10; // Máximo 10 intentos por minuto
+        opt.QueueLimit = 0;   // Rechazo inmediato sin encolar
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect("localhost:6379"));
+    ConnectionMultiplexer.Connect(redisOptions));
     
 var app = builder.Build();
 
@@ -61,7 +81,9 @@ app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 
-//app.UseRequestAuthorization();
+app.UseRateLimiter();
+
+app.UseRequestAuthorization();
 
 app.MapControllers();
 

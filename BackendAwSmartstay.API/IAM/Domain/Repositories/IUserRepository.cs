@@ -14,14 +14,10 @@ public interface IUserRepository : IBaseRepository<User>
     /// <summary>
     ///     Find a user by username
     /// </summary>
-    /// <param name="username">The username to search</param>
-    /// <returns>The user</returns>
     Task<User?> FindByUsernameAsync(string username);
 
     /// <summary>
     ///     Checks asynchronously whether a user with the given username exists.
     /// </summary>
-    /// <param name="username">The username to search</param>
-    /// <returns>True if the user exists, false otherwise.</returns>
     Task<bool> ExistsByUsernameAsync(string username);
 }

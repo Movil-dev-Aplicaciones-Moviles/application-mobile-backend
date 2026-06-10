@@ -38,4 +38,24 @@ public interface IUserCommandService
      * <param name="command">The change password command</param>
      */
     Task Handle(ChangePasswordCommand command);
+
+    /// <summary>
+    ///     Handle create user command (admin/chain_admin scoped).
+    /// </summary>
+    Task Handle(CreateUserCommand command);
+
+    /// <summary>
+    ///     Handle update user command (admin/chain_admin scoped).
+    /// </summary>
+    Task Handle(UpdateUserCommand command);
+
+    /// <summary>
+    ///     Handle assign role command (admin/chain_admin scoped).
+    /// </summary>
+    Task Handle(AssignRoleCommand command);
+
+    /// <summary>
+    ///     Handle deactivate user command — performs soft delete.
+    /// </summary>
+    Task Handle(DeactivateUserCommand command);
 }

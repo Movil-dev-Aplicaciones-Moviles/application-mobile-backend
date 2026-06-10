@@ -28,5 +28,8 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IHashingService, HashingService>();
         builder.Services.AddScoped<IIamContextFacade, IamContextFacade>();
+        
+        builder.Services.AddScoped<IRoleAuthorizationService, RoleAuthorizationService>();
+        builder.Services.AddScoped<IUserScopeService, UserScopeService>();
     }
 }

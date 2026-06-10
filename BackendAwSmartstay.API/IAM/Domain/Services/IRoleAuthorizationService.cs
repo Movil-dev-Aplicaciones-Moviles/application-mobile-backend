@@ -17,4 +17,10 @@ public interface IRoleAuthorizationService
     /// Returns true if the assigner is allowed to grant the target role to another user.
     /// </summary>
     bool CanAssignRole(User assigner, string targetRole);
+
+    /// <summary>
+    /// Returns true if the assigner is allowed to set or change the ChainId of a user.
+    /// Only a global ChainAdmin (ChainId == null) can assign arbitrary chain affiliations.
+    /// </summary>
+    bool CanAssignChainId(User assigner, int? targetChainId);
 }

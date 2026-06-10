@@ -45,4 +45,16 @@ public class RoleAuthorizationService(IUserScopeService scopeService) : IRoleAut
 
         return true;
     }
+
+    /// <summary>
+    /// Only a global ChainAdmin (ChainId == null) can assign or reassign ChainId.
+    /// All other roles are forbidden from modifying chain affiliation.
+    /// </summary>
+    public bool CanAssignChainId(User assigner, int? targetChainId)
+    {
+        if (assigner == null) return false;
+
+        return assigner.Role.Value.Equals(UserRoles.ChainAdmin, StringComparison.OrdinalIgnoreCase)
+               && assigner.ChainId == null;
+    }
 }

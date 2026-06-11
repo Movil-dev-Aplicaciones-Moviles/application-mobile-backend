@@ -158,4 +158,125 @@ public class UsersController(
             return BadRequest(new { message = "An unexpected error occurred while processing your request." });
         }
     }
+
+    /// <summary>
+    ///     Updates an existing user's attributes. All resource fields are optional.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
+    [SwaggerOperation(Summary = "Update an existing user", Description = "Updates user attributes if the actor has scope access and hierarchical superiority.", OperationId = "UpdateUser")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The user was updated successfully")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request payload or unexpected error")]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "Missing or invalid JWT Token")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "User does not have required permissions to modify the target")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "User not found")]
+    [SwaggerResponse(StatusCodes.Status409Conflict, "Username already exists")]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserResource resource)
+    {
+        var actor = (User?)HttpContext.Items["User"];
+        if (actor == null) return Unauthorized(new { message = "Authentication context is missing or invalid." });
+
+        var command = UpdateUserCommandFromResourceAssembler.ToCommandFromResource(resource, actor.Id, id);
+
+        try
+        {
+            await userCommandService.Handle(command);
+            return Ok(new { message = "User updated successfully" });
+        }
+        catch (UserNotFoundException e)
+        {
+            return NotFound(new { message = e.Message });
+        }
+        catch (UsernameAlreadyExistsException e)
+        {
+            return Conflict(new { message = e.Message });
+        }
+        catch (UnauthorizedOperationException e)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message });
+        }
+        catch (Exception)
+        {
+            return BadRequest(new { message = "An unexpected error occurred while processing your request." });
+        }
+    }
+
+    /// <summary>
+    ///     Assigns a new role to an existing user.
+    /// </summary>
+    [HttpPost("{id}/assign-role")]
+    [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
+    [SwaggerOperation(Summary = "Assign a new role to a user", Description = "Changes a user's role if the actor has scope access and is allowed to assign the target role.", OperationId = "AssignRole")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Role assigned successfully")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request payload or unexpected error")]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "Missing or invalid JWT Token")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "User does not have required permissions to assign the role")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "User not found")]
+    public async Task<IActionResult> AssignRole(int id, [FromBody] AssignRoleResource resource)
+    {
+        var actor = (User?)HttpContext.Items["User"];
+        if (actor == null) return Unauthorized(new { message = "Authentication context is missing or invalid." });
+
+        // Utilizamos el TargetUserId de la ruta como fuente de verdad adaptando el recurso
+        // con una expresión 'with' de C#9+ para inyectar la URL como parámetro definitivo.
+        var adaptedResource = resource with { TargetUserId = id };
+        var command = AssignRoleCommandFromResourceAssembler.ToCommandFromResource(adaptedResource, actor.Id);
+
+        try
+        {
+            await userCommandService.Handle(command);
+            return Ok(new { message = "Role assigned successfully" });
+        }
+        catch (UserNotFoundException e)
+        {
+            return NotFound(new { message = e.Message });
+        }
+        catch (UnauthorizedOperationException e)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message });
+        }
+        catch (Exception)
+        {
+            return BadRequest(new { message = "An unexpected error occurred while processing your request." });
+        }
+    }
+
+    /// <summary>
+    ///     Deactivates a user account (soft delete).
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
+    [SwaggerOperation(Summary = "Deactivate a user", Description = "Performs a soft delete on the user if the actor has scope access and hierarchical superiority.", OperationId = "DeactivateUser")]
+    [SwaggerResponse(StatusCodes.Status200OK, "User deactivated successfully")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Unexpected error")]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "Missing or invalid JWT Token")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "User does not have required permissions to deactivate the target")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "User not found")]
+    public async Task<IActionResult> DeactivateUser(int id)
+    {
+        var actor = (User?)HttpContext.Items["User"];
+        if (actor == null) return Unauthorized(new { message = "Authentication context is missing or invalid." });
+
+        // DeactivateUserCommand no utiliza recursos provenientes del body,
+        // solo el actor ID que viene del contexto de seguridad y el target ID de la ruta.
+        var command = new DeactivateUserCommand(actor.Id, id);
+
+        try
+        {
+            await userCommandService.Handle(command);
+            return Ok(new { message = "User deactivated successfully" });
+        }
+        catch (UserNotFoundException e)
+        {
+            return NotFound(new { message = e.Message });
+        }
+        catch (UnauthorizedOperationException e)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message });
+        }
+        catch (Exception)
+        {
+            return BadRequest(new { message = "An unexpected error occurred while processing your request." });
+        }
+    }
 }

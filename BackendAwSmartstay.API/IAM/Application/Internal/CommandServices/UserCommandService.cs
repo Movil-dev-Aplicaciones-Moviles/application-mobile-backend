@@ -33,7 +33,6 @@ public class UserCommandService(
     public async Task<(User user, string token)> Handle(SignInCommand command)
     {
         var username = new Username(command.Username);
-
         var user = await userRepository.FindByUsernameAsync(username);
 
         if (user == null || !hashingService.VerifyPassword(command.Password, user.PasswordHash))
@@ -52,7 +51,6 @@ public class UserCommandService(
     public async Task Handle(SignUpCommand command)
     {
         var username = new Username(command.Username);
-
         if (await userRepository.ExistsByUsernameAsync(username))
             throw new UsernameAlreadyExistsException(command.Username);
 
@@ -89,7 +87,6 @@ public class UserCommandService(
     public async Task Handle(ChangePasswordCommand command)
     {
         var user = await userRepository.FindByIdAsync(command.UserId);
-
         if (user == null)
             throw new UserNotFoundException(command.UserId);
 
@@ -211,6 +208,14 @@ public class UserCommandService(
             throw new UnauthorizedOperationException(
                 $"User {actor.Id} cannot assign role '{command.NewRole}'.");
 
+        // --- NEW RULE: Protect the last ChainAdmin ---
+        if (string.Equals(target.Role.Value, UserRoles.ChainAdmin, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(command.NewRole, UserRoles.ChainAdmin, StringComparison.OrdinalIgnoreCase) &&
+            target.Status == UserStatus.Active)
+        {
+            await EnsureAtLeastOneChainAdminRemainsAsync();
+        }
+
         target.AssignRole(command.NewRole);
         await unitOfWork.CompleteAsync();
     }
@@ -228,6 +233,13 @@ public class UserCommandService(
             throw new UnauthorizedOperationException(
                 $"User {actor.Id} cannot deactivate user {target.Id}.");
 
+        // --- NEW RULE: Protect the last ChainAdmin ---
+        if (string.Equals(target.Role.Value, UserRoles.ChainAdmin, StringComparison.OrdinalIgnoreCase) &&
+            target.Status == UserStatus.Active)
+        {
+            await EnsureAtLeastOneChainAdminRemainsAsync();
+        }
+
         target.Deactivate();
         await unitOfWork.CompleteAsync();
     }
@@ -242,7 +254,6 @@ public class UserCommandService(
     private async Task<User> ResolveActorAsync(int actorUserId)
     {
         var actor = await userRepository.FindByIdAsync(actorUserId);
-
         if (actor == null)
             throw new UserNotFoundException(actorUserId);
 
@@ -259,10 +270,21 @@ public class UserCommandService(
     private async Task<User> ResolveTargetAsync(int targetUserId)
     {
         var target = await userRepository.FindByIdAsync(targetUserId);
-
         if (target == null)
             throw new UserNotFoundException(targetUserId);
 
         return target;
+    }
+
+    /// <summary>
+    /// Ensures that at least one active ChainAdmin remains in the system.
+    /// </summary>
+    private async Task EnsureAtLeastOneChainAdminRemainsAsync()
+    {
+        var activeChainAdminsCount = await userRepository.CountActiveByRoleAsync(UserRoles.ChainAdmin);
+        if (activeChainAdminsCount <= 1)
+        {
+            throw new UnauthorizedOperationException("Operation would leave the system without an active ChainAdmin.");
+        }
     }
 }

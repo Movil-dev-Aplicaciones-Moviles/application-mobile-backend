@@ -20,4 +20,9 @@ public interface IUserRepository : IBaseRepository<User>
     ///     Checks asynchronously whether a user with the given username exists.
     /// </summary>
     Task<bool> ExistsByUsernameAsync(string username);
+
+    /// <summary>
+    ///     Counts the number of active users that have a specific role.
+    /// </summary>
+    Task<int> CountActiveByRoleAsync(string role);
 }

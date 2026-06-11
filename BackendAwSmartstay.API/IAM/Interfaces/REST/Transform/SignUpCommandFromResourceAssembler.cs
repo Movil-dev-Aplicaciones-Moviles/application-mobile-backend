@@ -9,12 +9,17 @@ namespace BackendAwSmartstay.API.IAM.Interfaces.REST.Transform;
 public static class SignUpCommandFromResourceAssembler
 {
     /// <summary>
-    ///     Converts the resource to a domain command.
+    ///     Converts the resource and optional actor ID to a domain command.
     /// </summary>
     /// <param name="resource">The sign-up resource.</param>
+    /// <param name="actorUserId">The optional ID of the user executing the action.</param>
     /// <returns>The command for user registration.</returns>
-    public static SignUpCommand ToCommandFromResource(SignUpResource resource)
+    public static SignUpCommand ToCommandFromResource(SignUpResource resource, int? actorUserId = null)
     {
-        return new SignUpCommand(resource.Username, resource.Password);
+        return new SignUpCommand(
+            resource.Username, 
+            resource.Password, 
+            resource.Role, 
+            actorUserId);
     }
 }

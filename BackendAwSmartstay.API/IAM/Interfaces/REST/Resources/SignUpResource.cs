@@ -7,7 +7,9 @@ namespace BackendAwSmartstay.API.IAM.Interfaces.REST.Resources;
 /// </summary>
 /// <param name="Username">The desired username (email).</param>
 /// <param name="Password">The desired password.</param>
+/// <param name="Role">The optional role to assign.</param>
 public record SignUpResource(
     [Required] string Username, 
-    [Required] string Password
+    [Required] string Password,
+    string? Role
 );

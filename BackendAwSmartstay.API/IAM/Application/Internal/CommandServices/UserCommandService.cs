@@ -24,7 +24,7 @@ public class UserCommandService(
     IUnitOfWork unitOfWork) : IUserCommandService
 {
     // ═══════════════════════════════════════════════════════════
-    // Existing authentication commands (unchanged)
+    // Existing authentication commands
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>
@@ -33,26 +33,51 @@ public class UserCommandService(
     public async Task<(User user, string token)> Handle(SignInCommand command)
     {
         var username = new Username(command.Username);
+
         var user = await userRepository.FindByUsernameAsync(username);
+
         if (user == null || !hashingService.VerifyPassword(command.Password, user.PasswordHash))
         {
             throw new InvalidCredentialsException();
         }
+
         var token = tokenService.GenerateToken(user);
         return (user, token);
     }
 
     /// <summary>
-    /// Processes a sign-up request.
+    /// Processes a sign-up request with optional role assignment.
+    /// Guest registration remains anonymous even if explicitly requested.
     /// </summary>
     public async Task Handle(SignUpCommand command)
     {
         var username = new Username(command.Username);
+
         if (await userRepository.ExistsByUsernameAsync(username))
             throw new UsernameAlreadyExistsException(command.Username);
 
         var hashedPassword = hashingService.HashPassword(command.Password);
-        var user = new User(username, hashedPassword, UserRoles.Guest);
+        var assignedRole = UserRoles.Guest;
+
+        // If a specific role is requested and it is not the default Guest role, validate the actor's permissions
+        if (!string.IsNullOrWhiteSpace(command.Role) 
+            && !command.Role.Equals(UserRoles.Guest, StringComparison.OrdinalIgnoreCase))
+        {
+            if (command.ActorUserId == null)
+                throw new UnauthorizedOperationException("Authentication required to assign a specific role during sign-up.");
+
+            var actor = await ResolveActorAsync(command.ActorUserId.Value);
+
+            if (!roleAuthorizationService.CanAssignRole(actor, command.Role))
+                throw new UnauthorizedOperationException(
+                    $"User {actor.Id} cannot assign role '{command.Role}'.");
+
+            assignedRole = command.Role;
+        }
+
+        // HotelId and ChainId default to null via the constructor logic.
+        // For full scope initialization, management endpoints (CreateUser) should be used.
+        var user = new User(username, hashedPassword, assignedRole);
 
         await userRepository.AddAsync(user);
         await unitOfWork.CompleteAsync();
@@ -64,8 +89,10 @@ public class UserCommandService(
     public async Task Handle(ChangePasswordCommand command)
     {
         var user = await userRepository.FindByIdAsync(command.UserId);
+
         if (user == null)
             throw new UserNotFoundException(command.UserId);
+
         if (!hashingService.VerifyPassword(command.CurrentPassword, user.PasswordHash))
             throw new InvalidCredentialsException();
 
@@ -116,7 +143,8 @@ public class UserCommandService(
     }
 
     /// <summary>
-    /// Updates an existing user's attributes. Null fields are ignored.
+    /// Updates an existing user's attributes.
+    /// Null fields are ignored.
     /// Actor must have hierarchy superiority over the target and scope access.
     /// </summary>
     public async Task Handle(UpdateUserCommand command)
@@ -150,6 +178,7 @@ public class UserCommandService(
             if (!userScopeService.CanAccessHotel(actor, command.NewHotelId))
                 throw new UnauthorizedOperationException(
                     $"User {actor.Id} cannot assign hotel {command.NewHotelId}.");
+
             target.UpdateHotelId(command.NewHotelId);
         }
 
@@ -158,6 +187,7 @@ public class UserCommandService(
             if (!roleAuthorizationService.CanAssignChainId(actor, command.NewChainId))
                 throw new UnauthorizedOperationException(
                     $"User {actor.Id} cannot assign chain {command.NewChainId}.");
+
             target.UpdateChainId(command.NewChainId);
         }
 
@@ -212,11 +242,14 @@ public class UserCommandService(
     private async Task<User> ResolveActorAsync(int actorUserId)
     {
         var actor = await userRepository.FindByIdAsync(actorUserId);
+
         if (actor == null)
             throw new UserNotFoundException(actorUserId);
+
         if (actor.Status == UserStatus.Inactive)
             throw new UnauthorizedOperationException(
                 $"User {actorUserId} is inactive and cannot perform management operations.");
+
         return actor;
     }
 
@@ -226,8 +259,10 @@ public class UserCommandService(
     private async Task<User> ResolveTargetAsync(int targetUserId)
     {
         var target = await userRepository.FindByIdAsync(targetUserId);
+
         if (target == null)
             throw new UserNotFoundException(targetUserId);
+
         return target;
     }
 }

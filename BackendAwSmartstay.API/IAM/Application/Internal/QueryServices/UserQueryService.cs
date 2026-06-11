@@ -26,13 +26,6 @@ public class UserQueryService(
         return target;
     }
 
-    public async Task<IEnumerable<User>> Handle(GetAllUsersQuery query)
-    {
-        // Mantenido temporalmente por compatibilidad hacia atrás.
-        // MARCADO COMO OBSOLETO.
-        return await userRepository.ListAsync();
-    }
-
     public async Task<IEnumerable<User>> Handle(GetUsersByScopeQuery query)
     {
         var actor = await userRepository.FindByIdAsync(query.ActorUserId);

@@ -40,6 +40,9 @@ public class UserCommandService(
             throw new InvalidCredentialsException();
         }
 
+        if (user.Status == UserStatus.Inactive)
+            throw new UnauthorizedOperationException("La cuenta ha sido desactivada. Contacte al administrador.");
+
         var token = tokenService.GenerateToken(user);
         return (user, token);
     }
@@ -95,6 +98,7 @@ public class UserCommandService(
 
         var newHashedPassword = hashingService.HashPassword(command.NewPassword);
         user.UpdatePasswordHash(newHashedPassword);
+        user.IncrementTokenVersion();
 
         await unitOfWork.CompleteAsync();
     }
@@ -241,6 +245,7 @@ public class UserCommandService(
         }
 
         target.Deactivate();
+        target.IncrementTokenVersion();
         await unitOfWork.CompleteAsync();
     }
 

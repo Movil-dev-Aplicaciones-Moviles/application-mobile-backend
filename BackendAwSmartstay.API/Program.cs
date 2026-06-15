@@ -11,7 +11,9 @@ using BackendAwSmartstay.API.IAM.Infrastructure.Extensions;
 using BackendAwSmartstay.API.Profiles.Infrastructure.Interfaces.ASP.Configuration.Extensions;
 using BackendAwSmartstay.API.shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using BackendAwSmartstay.API.Analytics.Infrastructure.Interfaces.ASP.Configuration.Extensions;
+using BackendAwSmartstay.API.Shared.Infrastructure.Persistence.EFC.Configuration;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,20 +43,21 @@ builder.AddAnalyticsContextServices();
 // Mediator
 builder.AddCortexMediatorServices();
 
-//new implementation 
+// New implementation - Health Checks
 builder.Services.AddHealthChecks()
     .AddMySql(builder.Configuration.GetConnectionString("DefaultConnection")!, 
         name: "mysql-db-check", 
         tags: new[] { "database" });
 
-//redis implementation
-var redisOptions = new ConfigurationOptions
-{
-    EndPoints = { "host.docker.internal:6379" },
-    AbortOnConnectFail = false
-};
+// Redis implementation (Dinámico para Local y Nube)
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection") ?? "localhost:6379";
+var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+redisOptions.AbortOnConnectFail = false; // Evita que la app muera si Redis tarda en responder
 
-//TODO: Search if it's correct de implementation in the archive  - 1. Configuración del Rate Limiting (P1)
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisOptions));
+
+// Rate Limiting Configuration
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("AuthLimiter", opt =>
@@ -65,16 +68,34 @@ builder.Services.AddRateLimiter(options =>
     });
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(redisOptions));
     
 var app = builder.Build();
 
-app.EnsureDatabaseCreated();
-await app.SeedDatabaseAsync();
+// --- Bloque de Inicialización y Migraciones Seguras ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>(); 
+        
+        // Ejecuta las migraciones pendientes en la nube o local de forma automática
+        if (context.Database.IsRelational())
+        {
+            await context.Database.MigrateAsync();
+        }
+        
+        // Seeder integrado aquí adentro de forma segura
+        await app.SeedDatabaseAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ocurrió un error al aplicar las migraciones o el seeder en el arranque.");
+    }
+}
 
-// Swagger
+// Pipeline de Middlewares (HTTP request pipeline)
 app.UseOpenApiConfiguration();
 
 app.UseCors("AllowFrontend");
@@ -87,7 +108,6 @@ app.UseRequestAuthorization();
 
 app.MapControllers();
 
-// new implementation
 app.MapHealthChecks("/health");
 
 app.Run();

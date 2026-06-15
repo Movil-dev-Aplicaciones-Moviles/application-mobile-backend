@@ -32,6 +32,10 @@ public static class ModelBuilderExtensions
             .HasMaxLength(20)
             .HasDefaultValue(UserStatus.Active);
 
+        // Indexes
+        builder.Entity<User>().HasIndex(u => u.Username, "i_x_users_username").IsUnique();
+        builder.Entity<User>().HasIndex(u => u.Status, "i_x_users_status");
+
         builder.Entity<User>().Property(u => u.HotelId)
             .HasColumnName("hotel_id")
             .IsRequired(false);

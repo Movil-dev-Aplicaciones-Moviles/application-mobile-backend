@@ -23,7 +23,8 @@ public class TokenService(IOptions<TokenSettings> tokenSettings) : ITokenService
             {
                 new Claim(ClaimTypes.Sid, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim("token_version", user.TokenVersion.ToString())
             }),
             Expires = DateTime.UtcNow.AddHours(_tokenSettings.ExpirationInHours),
             Issuer = _tokenSettings.Issuer,

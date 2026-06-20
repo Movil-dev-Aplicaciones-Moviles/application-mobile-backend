@@ -8,15 +8,9 @@ namespace BackendAwSmartstay.API.IAM.Infrastructure.Seed;
 
 public class IamSeeder
 {
-    /// <summary>
-    /// Seeds an initial chain admin user if configured and missing.
-    /// Uses GetRequiredService to resolve dependencies and ILogger to record the seed flow.
-    /// Reads configuration from 'InitialChainAdmin:Username' and 'InitialChainAdmin:Password' or environment variables.
-    /// </summary>
     public static async Task SeedAsync(IServiceProvider services)
     {
         var logger = services.GetRequiredService<ILogger<IamSeeder>>();
-
         try
         {
             var config = services.GetRequiredService<IConfiguration>();
@@ -40,12 +34,11 @@ public class IamSeeder
             }
 
             var hashed = hashingService.HashPassword(password);
-            var user = new User(username, hashed, UserRoles.ChainAdmin);
+            var user = new User(username, hashed, UserRoles.ChainAdmin, hotelId: 1);
 
             await userRepository.AddAsync(user);
             await unitOfWork.CompleteAsync();
-
-            logger.LogInformation("IamSeeder: Created initial chain admin user '{Username}'.", username);
+            logger.LogInformation("IamSeeder: Created initial chain admin user '{Username}' with HotelId=1.", username);
         }
         catch (Exception e)
         {

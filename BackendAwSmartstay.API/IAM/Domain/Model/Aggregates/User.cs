@@ -1,83 +1,113 @@
 using System.Text.Json.Serialization;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
+using BackendAwSmartstay.API.IAM.Domain.Model.Enums;
+using BackendAwSmartstay.API.IAM.Domain.Model.ValueObjects;
 
 namespace BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 
 /// <summary>
-///     User Aggregate Root.
-///     Represents a registered user within the identity context.
+/// User Aggregate Root.
+/// Represents a registered user within the identity context.
 /// </summary>
-/// <remarks>
-///     This class encapsulates user credentials and role information.
-/// </remarks>
 public class User
 {
-    /// <summary>
-    ///     Initializes a new instance of the <see cref="User"/> class.
-    /// </summary>
-    /// <param name="username">The unique username.</param>
-    /// <param name="passwordHash">The bcrypt hashed password.</param>
-    /// <param name="role">The user's role (e.g., 'guest', 'staff').</param>
-    public User(string username, string passwordHash, string role)
+    public User(string username, string passwordHash, string role,
+        UserStatus status = UserStatus.Active,
+        int? hotelId = null,
+        int? chainId = null,
+        int tokenVersion = 0)
     {
-        Username = username;
+        Username = new Username(username);
         PasswordHash = passwordHash;
-        Role = role;
+        Role = new Role(role);
+        Status = status;
+        HotelId = hotelId;
+        ChainId = chainId;
+        TokenVersion = tokenVersion;
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
+
     /// <summary>
-    ///     Required by Entity Framework Core for materialization.
-    ///     Protected to enforce the use of the parameterized constructor in application code.
+    /// EF Core constructor. Do not use directly in domain logic.
     /// </summary>
-    public User() 
+    public User()
     {
-        Username = string.Empty;
+        Username = null!; // EF populates this via reflection after materialization
         PasswordHash = string.Empty;
-        Role = UserRoles.Guest;
+        Role = null!; // EF populates this via reflection after materialization
+        Status = UserStatus.Active;
+        TokenVersion = 0;
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>
-    ///     Gets the unique identifier of the user.
-    /// </summary>
     public int Id { get; private set; }
-    
-    /// <summary>
-    ///     Gets the username.
-    /// </summary>
-    public string Username { get; private set; }
+    public Username Username { get; private set; }
+    [JsonIgnore] public string PasswordHash { get; private set; }
+    public Role Role { get; private set; }
+    public UserStatus Status { get; private set; }
+    public int? HotelId { get; private set; }
+    public int? ChainId { get; private set; }
+    public int TokenVersion { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
 
-    /// <summary>
-    ///     Gets the security password hash.
-    /// </summary>
-    [JsonIgnore] 
-    public string PasswordHash { get; private set; }
-
-    /// <summary>
-    ///     Gets the assigned role of the user.
-    /// </summary>
-    public string Role { get; private set; }
-
-    /// <summary>
-    ///     Updates the username.
-    /// </summary>
-    /// <param name="username">The new username.</param>
-    /// <returns>The updated user instance.</returns>
     public User UpdateUsername(string username)
     {
-        Username = username;
+        Username = new Username(username);
+        UpdatedAt = DateTime.UtcNow;
         return this;
     }
 
-    /// <summary>
-    ///     Updates the password hash.
-    /// </summary>
-    /// <param name="passwordHash">The new password hash.</param>
-    /// <returns>The updated user instance.</returns>
     public User UpdatePasswordHash(string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("Password hash cannot be empty.", nameof(passwordHash));
-
         PasswordHash = passwordHash;
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User AssignRole(string newRole)
+    {
+        Role = new Role(newRole);
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User Deactivate()
+    {
+        Status = UserStatus.Inactive;
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User Activate()
+    {
+        Status = UserStatus.Active;
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User IncrementTokenVersion()
+    {
+        TokenVersion++;
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User UpdateHotelId(int? hotelId)
+    {
+        HotelId = hotelId;
+        UpdatedAt = DateTime.UtcNow;
+        return this;
+    }
+
+    public User UpdateChainId(int? chainId)
+    {
+        ChainId = chainId;
+        UpdatedAt = DateTime.UtcNow;
         return this;
     }
 }

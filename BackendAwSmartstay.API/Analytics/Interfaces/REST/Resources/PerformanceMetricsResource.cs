@@ -1,7 +1,7 @@
 namespace BackendAwSmartstay.API.Analytics.Interfaces.REST.Resources;
 
 /// <summary>
-/// Resource containing the performance metrics for the dashboard.
+///     Resource containing the performance metrics for the dashboard.
 /// </summary>
 public record PerformanceMetricsResource(
     decimal TotalRevenue,

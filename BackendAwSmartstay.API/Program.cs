@@ -56,7 +56,7 @@ await app.SeedDatabaseAsync();
 
 // Swagger
 app.UseOpenApiConfiguration();
-
+// for adding allowFroent
 app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();

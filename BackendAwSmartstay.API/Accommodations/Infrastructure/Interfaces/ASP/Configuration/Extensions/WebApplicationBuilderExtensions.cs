@@ -16,11 +16,15 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddScoped<IRoomRepository, RoomRepository>();
         builder.Services.AddScoped<IRoomTypeRepository, RoomTypeRepository>();
         builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+        builder.Services.AddScoped<IHousekeepingTaskRepository, HousekeepingTaskRepository>();
+        builder.Services.AddScoped<IMaintenanceRequestRepository, MaintenanceRequestRepository>();
 
         // Command Services
         builder.Services.AddScoped<IRoomCommandService, RoomCommandService>();
         builder.Services.AddScoped<IRoomTypeCommandService, RoomTypeCommandService>();
         builder.Services.AddScoped<IHotelCommandService, HotelCommandService>();
+        builder.Services.AddScoped<IHousekeepingCommandService, HousekeepingCommandService>();
+        builder.Services.AddScoped<IMaintenanceCommandService, MaintenanceCommandService>();
 
         // Domain Pricing Service
         builder.Services.AddScoped<IHotelPricingService, HotelPricingService>();

@@ -1,14 +1,42 @@
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Entities;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.Events;
 using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
+using BackendAwSmartstay.API.Shared.Domain.Model.Events;
 
 namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Aggregates;
 
 /// <summary>
 /// Represents a room aggregate in the accommodations domain.
 /// </summary>
-public partial class Room
+public partial class Room : IEntityWithEvents
 {
+    private readonly List<IEvent> _domainEvents = new();
+
+    /// <summary>
+    /// Gets the read-only collection of domain events accumulated by this aggregate.
+    /// Not mapped to the database.
+    /// </summary>
+    public IReadOnlyCollection<IEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    /// <summary>
+    /// Registers a domain event on this aggregate.
+    /// Events are cleared after being dispatched by the UnitOfWork.
+    /// </summary>
+    /// <param name="domainEvent">The domain event to register.</param>
+    public void AddDomainEvent(IEvent domainEvent)
+    {
+        _domainEvents.Add(domainEvent);
+    }
+
+    /// <summary>
+    /// Clears all registered domain events after they have been dispatched.
+    /// </summary>
+    public void ClearDomainEvents()
+    {
+        _domainEvents.Clear();
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Room"/> class with default values.
     /// </summary>
@@ -31,6 +59,9 @@ public partial class Room
         Description = command.Description;
         Amenities = command.Amenities;
         Status = command.Status;
+
+        // Register domain event — the Id will be assigned by EF Core on SaveChanges
+        AddDomainEvent(new RoomCreatedEvent(Id, HotelId, RoomTypeId));
     }
     
     /// <summary>
@@ -48,11 +79,19 @@ public partial class Room
         if (price < 0) 
             throw new ArgumentException("Price cannot be negative.");
 
+        var oldStatus = Status;
+
         RoomTypeId = roomTypeId;
         Price = price;
         Description = description;
         Amenities = amenities;
         Status = status;
+
+        // Register domain event if the operational status changed
+        if (oldStatus != status)
+        {
+            AddDomainEvent(new RoomStatusChangedEvent(Id, oldStatus, status));
+        }
     }
 
     /// <summary>

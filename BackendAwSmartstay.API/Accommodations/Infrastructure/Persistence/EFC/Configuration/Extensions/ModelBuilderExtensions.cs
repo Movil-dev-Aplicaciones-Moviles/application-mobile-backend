@@ -121,6 +121,37 @@ public static class ModelBuilderExtensions
             .HasForeignKey(r => r.RoomTypeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // HousekeepingTask Entity (Aggregate Root)
+        builder.Entity<HousekeepingTask>().ToTable("housekeeping_tasks");
+        builder.Entity<HousekeepingTask>().HasKey(t => t.Id);
+        builder.Entity<HousekeepingTask>().Property(t => t.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<HousekeepingTask>().Property(t => t.RoomId).IsRequired();
+        builder.Entity<HousekeepingTask>().Property(t => t.AssignedHousekeeperId).IsRequired();
+        builder.Entity<HousekeepingTask>().Property(t => t.Status)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(50);
+        builder.Entity<HousekeepingTask>().Property(t => t.TaskType)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(50);
+
+        // MaintenanceRequest Entity (Aggregate Root)
+        builder.Entity<MaintenanceRequest>().ToTable("maintenance_requests");
+        builder.Entity<MaintenanceRequest>().HasKey(r => r.Id);
+        builder.Entity<MaintenanceRequest>().Property(r => r.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<MaintenanceRequest>().Property(r => r.RoomId).IsRequired();
+        builder.Entity<MaintenanceRequest>().Property(r => r.Description).IsRequired().HasMaxLength(1000);
+        builder.Entity<MaintenanceRequest>().Property(r => r.AssignedTechnicianId).IsRequired(false);
+        builder.Entity<MaintenanceRequest>().Property(r => r.Status)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(50);
+        builder.Entity<MaintenanceRequest>().Property(r => r.Priority)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(50);
+
         // --- 5. SEED DATA (Hardcoded Aggregates) ---
         
         // Seed Room Types

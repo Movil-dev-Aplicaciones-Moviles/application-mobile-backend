@@ -1,3 +1,5 @@
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
+
 namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 
 /// <summary>
@@ -8,6 +10,7 @@ namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 /// <param name="Price">The cost per night assigned to the room.</param>
 /// <param name="Description">The detailed description of the physical room conditions.</param>
 /// <param name="Amenities">The list of services or features included.</param>
+/// <param name="Status">The operational status of the room (strongly typed).</param>
 
 public record CreateRoomCommand(
     int HotelId,  
@@ -15,5 +18,5 @@ public record CreateRoomCommand(
     decimal Price, 
     string Description, 
     List<string> Amenities,
-    string Status
+    RoomStatus Status
 );

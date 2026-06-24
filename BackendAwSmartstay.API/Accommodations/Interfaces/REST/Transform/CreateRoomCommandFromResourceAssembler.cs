@@ -1,4 +1,5 @@
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Resources;
 
 namespace BackendAwSmartstay.API.Accommodations.Interfaces.REST.Transform;
@@ -13,7 +14,9 @@ public static class CreateRoomCommandFromResourceAssembler
             resource.Price,
             resource.Description,
             resource.Amenities,
-            resource.Status
+            Enum.TryParse<RoomStatus>(resource.Status, ignoreCase: true, out var status)
+                ? status
+                : RoomStatus.Clean
         );
     }
 }

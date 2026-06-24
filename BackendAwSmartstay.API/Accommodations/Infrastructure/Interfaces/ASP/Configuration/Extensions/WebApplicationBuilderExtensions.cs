@@ -22,6 +22,9 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddScoped<IRoomTypeCommandService, RoomTypeCommandService>();
         builder.Services.AddScoped<IHotelCommandService, HotelCommandService>();
 
+        // Domain Pricing Service
+        builder.Services.AddScoped<IHotelPricingService, HotelPricingService>();
+
         // Query Services
         builder.Services.AddScoped<IRoomQueryService, RoomQueryService>();
         builder.Services.AddScoped<IRoomTypeQueryService, RoomTypeQueryService>();

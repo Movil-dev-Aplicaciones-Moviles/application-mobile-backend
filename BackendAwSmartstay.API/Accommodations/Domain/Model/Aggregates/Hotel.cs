@@ -41,25 +41,6 @@ public partial class Hotel
     }
     
     /// <summary>
-    /// Navigation property for the rooms belonging to this hotel.
-    /// Required for calculating dynamic pricing (e.g., "From $X").
-    /// </summary>
-    public virtual ICollection<Room> Rooms { get; private set; } = new List<Room>();
-
-    /// <summary>
-    /// Calculates the lowest price among all rooms in this hotel.
-    /// </summary>
-    /// <returns>The minimum price found, or 0 if no rooms exist.</returns>
-    public decimal CalculateLowestPrice()
-    {
-        if (Rooms == null || !Rooms.Any())
-        {
-            return 0;
-        }
-        return Rooms.Min(r => r.Price);
-    }
-    
-    /// <summary>
     /// Updates the mutable information of the hotel aggregate.
     /// This method enforces business invariants during updates.
     /// </summary>

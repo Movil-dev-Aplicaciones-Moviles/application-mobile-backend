@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
 using System.Collections.Generic;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
 
 namespace BackendAwSmartstay.API.Accommodations.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
@@ -90,7 +91,10 @@ public static class ModelBuilderExtensions
         builder.Entity<Room>().HasKey(r => r.Id);
         builder.Entity<Room>().Property(r => r.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<Room>().Property(r => r.Description).IsRequired().HasMaxLength(1000);
-        builder.Entity<Room>().Property(r => r.Status).IsRequired().HasMaxLength(50);
+        builder.Entity<Room>().Property(r => r.Status)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(50);
         
         // Monetary value configuration (Precision, Scale)
         builder.Entity<Room>().Property(r => r.Price)
@@ -107,7 +111,7 @@ public static class ModelBuilderExtensions
 
         builder.Entity<Room>()
             .HasOne(r => r.Hotel)
-            .WithMany(h => h.Rooms)
+            .WithMany()
             .HasForeignKey(r => r.HotelId)
             .OnDelete(DeleteBehavior.Cascade);
         

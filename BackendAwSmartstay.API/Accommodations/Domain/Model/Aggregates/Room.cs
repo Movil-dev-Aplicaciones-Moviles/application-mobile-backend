@@ -1,5 +1,6 @@
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Entities;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
 
 namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Aggregates;
 
@@ -15,7 +16,7 @@ public partial class Room
     {
         Description = string.Empty;
         Amenities = new List<string>();
-        Status = "Clean";
+        Status = RoomStatus.Clean;
     }
 
     /// <summary>
@@ -41,15 +42,11 @@ public partial class Room
     /// <param name="description">The new description.</param>
     /// <param name="amenities">The new list of amenities.</param>
     /// <param name="status">The new operational status of the room.</param>
-    public void UpdateInformation(int roomTypeId, decimal price, string description, List<string> amenities, string status)
+    public void UpdateInformation(int roomTypeId, decimal price, string description, List<string> amenities, RoomStatus status)
     {
         // Validation logic can be placed here (e.g., Price > 0)
         if (price < 0) 
             throw new ArgumentException("Price cannot be negative.");
-
-        var validStatuses = new[] { "Clean", "Dirty", "Maintenance", "Reserved" };
-        if (!validStatuses.Contains(status))
-            throw new ArgumentException($"Invalid room status. Valid values are: {string.Join(", ", validStatuses)}");
 
         RoomTypeId = roomTypeId;
         Price = price;
@@ -77,9 +74,10 @@ public partial class Room
     public decimal Price { get; private set; }
     
     /// <summary>
-    /// The operational status of the room (e.g., Clean, Dirty, Maintenance, Reserved).
+    /// The operational status of the room (Clean, Dirty, Maintenance, Reserved).
+    /// Strongly typed via <see cref="RoomStatus"/> to eliminate primitive obsession.
     /// </summary>
-    public string Status { get; private set; }
+    public RoomStatus Status { get; private set; }
     
     /// <summary>
     /// A description of the room.

@@ -1,3 +1,5 @@
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
+
 namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 
 /// <summary>
@@ -9,11 +11,12 @@ namespace BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 /// <param name="Price">The new price.</param>
 /// <param name="Description">The new description.</param>
 /// <param name="Amenities">The new list of amenities.</param>
+/// <param name="Status">The new operational status (strongly typed).</param>
 public record UpdateRoomCommand(
     int Id,
     int RoomTypeId,
     decimal Price,
     string Description,
     List<string> Amenities,
-    string Status
+    RoomStatus Status
 );

@@ -26,4 +26,12 @@ public class RoomRepository(AppDbContext context) : BaseRepository<Room>(context
             .Include(r => r.Hotel)
             .ToListAsync();
     }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<Room>> ListByHotelIdAsync(int hotelId)
+    {
+        return await Context.Set<Room>()
+            .Where(r => r.HotelId == hotelId)
+            .ToListAsync();
+    }
 }

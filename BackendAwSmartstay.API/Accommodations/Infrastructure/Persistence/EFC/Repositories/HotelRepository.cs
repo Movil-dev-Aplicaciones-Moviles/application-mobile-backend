@@ -12,26 +12,7 @@ namespace BackendAwSmartstay.API.Accommodations.Infrastructure.Persistence.EFC.R
 /// </summary>
 public class HotelRepository(AppDbContext context) : BaseRepository<Hotel>(context), IHotelRepository
 {
-    /// <summary>
-    /// Retrieves all hotels including their room data to calculate base prices.
-    /// </summary>
-    /// <returns>List of hotels with rooms loaded.</returns>
-    public new async Task<IEnumerable<Hotel>> ListAsync()
-    {
-        return await Context.Set<Hotel>()
-            .Include(h => h.Rooms)
-            .ToListAsync();
-    }
-
-    /// <summary>
-    /// Retrieves a hotel by ID including room data.
-    /// </summary>
-    /// <param name="id">The hotel ID.</param>
-    /// <returns>The hotel with rooms loaded.</returns>
-    public new async Task<Hotel?> FindByIdAsync(int id)
-    {
-        return await Context.Set<Hotel>()
-            .Include(h => h.Rooms)
-            .FirstOrDefaultAsync(h => h.Id == id);
-    }
+    // Repository inherits ListAsync and FindByIdAsync from BaseRepository<Hotel>.
+    // No .Include(h => h.Rooms) is used here because Hotel and Room are separate aggregates.
+    // Room data is accessed exclusively through IRoomRepository to preserve aggregate boundaries.
 }

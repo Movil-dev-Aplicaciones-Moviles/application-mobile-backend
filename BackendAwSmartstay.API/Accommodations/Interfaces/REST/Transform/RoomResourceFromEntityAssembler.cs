@@ -15,7 +15,7 @@ public static class RoomResourceFromEntityAssembler
             entity.Price,
             entity.Description,
             entity.Amenities,
-            entity.Status
+            entity.Status.ToString() // Convert RoomStatus enum to string for REST response
         );
     }
 }

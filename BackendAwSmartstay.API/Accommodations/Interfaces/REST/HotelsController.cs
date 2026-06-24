@@ -1,6 +1,8 @@
 using System.Net.Mime;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Commands;
 using BackendAwSmartstay.API.Accommodations.Domain.Model.Queries;
+using BackendAwSmartstay.API.Accommodations.Domain.Model.ValueObjects;
 using BackendAwSmartstay.API.Accommodations.Domain.Services;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Resources;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Transform;
@@ -25,6 +27,7 @@ namespace BackendAwSmartstay.API.Accommodations.Interfaces.REST;
 public class HotelsController(
     IHotelCommandService hotelCommandService,
     IHotelQueryService hotelQueryService,
+    IHotelPricingService hotelPricingService,
     IRoomQueryService roomQueryService,
     IIamContextFacade iamContextFacade) : ControllerBase
 {
@@ -56,7 +59,7 @@ public class HotelsController(
         if (role == UserRoles.ChainAdmin)
         {
             var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-            var resources = hotels.Select(HotelResourceFromEntityAssembler.ToResourceFromEntity);
+            var resources = await Task.WhenAll(hotels.Select(h => BuildHotelResourceAsync(h)));
             return Ok(resources);
         }
 
@@ -70,7 +73,7 @@ public class HotelsController(
             if (hotel == null)
                 return NotFound();
 
-            var resource = HotelResourceFromEntityAssembler.ToResourceFromEntity(hotel);
+            var resource = await BuildHotelResourceAsync(hotel);
             return Ok(new List<HotelResource> { resource });
         }
 
@@ -85,7 +88,7 @@ public class HotelsController(
         if (role == UserRoles.Guest)
         {
             var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-            var resources = hotels.Select(HotelResourceFromEntityAssembler.ToResourceFromEntity);
+            var resources = await Task.WhenAll(hotels.Select(h => BuildHotelResourceAsync(h)));
             return Ok(resources);
         }
 
@@ -111,7 +114,7 @@ public class HotelsController(
     {
         var hotel = await hotelQueryService.Handle(new GetHotelByIdQuery(hotelId));
         if (hotel is null) return NotFound();
-        var resource = HotelResourceFromEntityAssembler.ToResourceFromEntity(hotel);
+        var resource = await BuildHotelResourceAsync(hotel);
         return Ok(resource);
     }
 
@@ -137,7 +140,7 @@ public class HotelsController(
         
         if (hotel is null) return BadRequest();
         
-        var hotelResource = HotelResourceFromEntityAssembler.ToResourceFromEntity(hotel);
+        var hotelResource = await BuildHotelResourceAsync(hotel);
         return CreatedAtAction(nameof(GetHotelById), new { hotelId = hotel.Id }, hotelResource);
     }
     
@@ -164,7 +167,7 @@ public class HotelsController(
 
         if (updatedHotel is null) return NotFound();
 
-        var hotelResource = HotelResourceFromEntityAssembler.ToResourceFromEntity(updatedHotel);
+        var hotelResource = await BuildHotelResourceAsync(updatedHotel);
         return Ok(hotelResource);
     }
 
@@ -190,7 +193,7 @@ public class HotelsController(
 
         if (deletedHotel is null) return NotFound();
 
-        var hotelResource = HotelResourceFromEntityAssembler.ToResourceFromEntity(deletedHotel);
+        var hotelResource = await BuildHotelResourceAsync(deletedHotel);
         return Ok(hotelResource);
     }
 
@@ -236,6 +239,15 @@ public class HotelsController(
         return Forbid();
     }
 
+    /// <summary>
+    /// Helper method to convert a Hotel entity to a HotelResource with its lowest price.
+    /// </summary>
+    private async Task<HotelResource> BuildHotelResourceAsync(Hotel hotel)
+    {
+        var lowestPrice = await hotelPricingService.CalculateLowestPriceAsync(hotel.Id);
+        return HotelResourceFromEntityAssembler.ToResourceFromEntity(hotel, lowestPrice);
+    }
+
     private async Task<IActionResult> BuildMetricsResponse(int hotelId)
     {
         var hotel = await hotelQueryService.Handle(new GetHotelByIdQuery(hotelId));
@@ -250,11 +262,11 @@ public class HotelsController(
         var roomsList = rooms.ToList();
         var totalRooms = roomsList.Count;
 
-        // 3. Rooms grouped by status
-        var cleanRooms = roomsList.Count(r => r.Status == "Clean");
-        var dirtyRooms = roomsList.Count(r => r.Status == "Dirty");
-        var maintenanceRooms = roomsList.Count(r => r.Status == "Maintenance");
-        var reservedRooms = roomsList.Count(r => r.Status == "Reserved");
+        // 3. Rooms grouped by status (strongly typed via RoomStatus)
+        var cleanRooms = roomsList.Count(r => r.Status == RoomStatus.Clean);
+        var dirtyRooms = roomsList.Count(r => r.Status == RoomStatus.Dirty);
+        var maintenanceRooms = roomsList.Count(r => r.Status == RoomStatus.Maintenance);
+        var reservedRooms = roomsList.Count(r => r.Status == RoomStatus.Reserved);
 
         var metrics = new HotelMetricsResource(
             hotelId,

@@ -7,5 +7,6 @@ public record RoomResource(
     string RoomTypeName, 
     decimal Price, 
     string Description, 
-    List<string> Amenities
+    List<string> Amenities,
+    string Status
 );

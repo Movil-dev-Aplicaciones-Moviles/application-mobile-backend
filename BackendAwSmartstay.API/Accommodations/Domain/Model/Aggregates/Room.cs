@@ -15,6 +15,7 @@ public partial class Room
     {
         Description = string.Empty;
         Amenities = new List<string>();
+        Status = "Clean";
     }
 
     /// <summary>
@@ -24,12 +25,11 @@ public partial class Room
     public Room(CreateRoomCommand command) : this()
     {
         RoomTypeId = command.RoomTypeId;
-        // NUEVOS CAMPOS
         HotelId = command.HotelId;
         Price = command.Price;
-        // -------------
         Description = command.Description;
         Amenities = command.Amenities;
+        Status = command.Status;
     }
     
     /// <summary>
@@ -40,16 +40,22 @@ public partial class Room
     /// <param name="price">The new price per night.</param>
     /// <param name="description">The new description.</param>
     /// <param name="amenities">The new list of amenities.</param>
-    public void UpdateInformation(int roomTypeId, decimal price, string description, List<string> amenities)
+    /// <param name="status">The new operational status of the room.</param>
+    public void UpdateInformation(int roomTypeId, decimal price, string description, List<string> amenities, string status)
     {
         // Validation logic can be placed here (e.g., Price > 0)
         if (price < 0) 
             throw new ArgumentException("Price cannot be negative.");
 
+        var validStatuses = new[] { "Clean", "Dirty", "Maintenance", "Reserved" };
+        if (!validStatuses.Contains(status))
+            throw new ArgumentException($"Invalid room status. Valid values are: {string.Join(", ", validStatuses)}");
+
         RoomTypeId = roomTypeId;
         Price = price;
         Description = description;
         Amenities = amenities;
+        Status = status;
     }
 
     /// <summary>
@@ -61,16 +67,19 @@ public partial class Room
     /// </summary>
     public int RoomTypeId { get; private set; }
     
-    // NUEVOS CAMPOS
     /// <summary>
     /// The identifier of the hotel this room belongs to.
     /// </summary>
-    public int HotelId { get; private set; } // FK al Hotel
+    public int HotelId { get; private set; }
     /// <summary>
     /// The price per night for the room.
     /// </summary>
-    public decimal Price { get; private set; } // Precio por noche
-    // -------------
+    public decimal Price { get; private set; }
+    
+    /// <summary>
+    /// The operational status of the room (e.g., Clean, Dirty, Maintenance, Reserved).
+    /// </summary>
+    public string Status { get; private set; }
     
     /// <summary>
     /// A description of the room.

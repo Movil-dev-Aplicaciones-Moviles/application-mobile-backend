@@ -1,5 +1,6 @@
 using BackendAwSmartstay.API.IAM.Domain.Model.Commands;
 using BackendAwSmartstay.API.IAM.Domain.Model.Queries;
+using BackendAwSmartstay.API.IAM.Domain.Repositories;
 using BackendAwSmartstay.API.IAM.Domain.Services;
 using BackendAwSmartstay.API.IAM.Interfaces.ACL;
 
@@ -11,7 +12,8 @@ namespace BackendAwSmartstay.API.IAM.Application.ACL.Services;
 /// </summary>
 public class IamContextFacade(
     IUserCommandService userCommandService,
-    IUserQueryService userQueryService) : IIamContextFacade
+    IUserQueryService userQueryService,
+    IUserRepository userRepository) : IIamContextFacade
 {
     /// <summary>
     /// Creates a new user resource within the system using the provided credentials.
@@ -50,5 +52,15 @@ public class IamContextFacade(
         var getUserByIdQuery = new GetUserByIdQuery(userId);
         var result = await userQueryService.Handle(getUserByIdQuery);
         return result?.Username ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Retrieves the count of active staff members assigned to a specific hotel.
+    /// </summary>
+    /// <param name="hotelId">The unique identifier of the target hotel.</param>
+    /// <returns>The number of active users assigned to the hotel.</returns>
+    public async Task<int> GetStaffCountByHotelIdAsync(int hotelId)
+    {
+        return await userRepository.CountByHotelIdAsync(hotelId);
     }
 }

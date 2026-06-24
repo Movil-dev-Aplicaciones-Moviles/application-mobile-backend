@@ -4,7 +4,9 @@ using BackendAwSmartstay.API.Accommodations.Domain.Model.Queries;
 using BackendAwSmartstay.API.Accommodations.Domain.Services;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Resources;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Transform;
+using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
+using BackendAwSmartstay.API.IAM.Interfaces.ACL;
 using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -22,7 +24,9 @@ namespace BackendAwSmartstay.API.Accommodations.Interfaces.REST;
 [SwaggerTag("Available Hotel Endpoints")]
 public class HotelsController(
     IHotelCommandService hotelCommandService,
-    IHotelQueryService hotelQueryService) : ControllerBase
+    IHotelQueryService hotelQueryService,
+    IRoomQueryService roomQueryService,
+    IIamContextFacade iamContextFacade) : ControllerBase
 {
     /// <summary>
     ///     Retrieves a collection of all registered hotel property resources.
@@ -35,16 +39,57 @@ public class HotelsController(
     [Authorize(UserRoles.Guest, UserRoles.Admin, UserRoles.ChainAdmin)]
     [SwaggerOperation(
         Summary = "Get all hotels",
-        Description = "Retrieves all hotel aggregates mapped to external representations. Open to guests and staff.",
+        Description = "Retrieves hotel aggregates based on role-based data isolation. ChainAdmin sees all hotels; Admin sees only their assigned hotel; operational roles are denied.",
         OperationId = "GetAllHotels")]
     [SwaggerResponse(StatusCodes.Status200OK, "The hotel resource list was successfully fetched.", typeof(IEnumerable<HotelResource>))]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "The authenticated identity has insufficient privilege levels.")]
     public async Task<IActionResult> GetAllHotels()
     {
-        var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-        var resources = hotels.Select(HotelResourceFromEntityAssembler.ToResourceFromEntity);
-        return Ok(resources);
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return Unauthorized();
+
+        var role = user.Role.Value?.ToLowerInvariant();
+
+        // REGLA 1: ChainAdmin sees all hotels
+        if (role == UserRoles.ChainAdmin)
+        {
+            var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
+            var resources = hotels.Select(HotelResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(resources);
+        }
+
+        // REGLA 2: Admin sees only their assigned hotel
+        if (role == UserRoles.Admin)
+        {
+            if (user.HotelId == null)
+                return Forbid();
+
+            var hotel = await hotelQueryService.Handle(new GetHotelByIdQuery(user.HotelId.Value));
+            if (hotel == null)
+                return NotFound();
+
+            var resource = HotelResourceFromEntityAssembler.ToResourceFromEntity(hotel);
+            return Ok(new List<HotelResource> { resource });
+        }
+
+        // REGLA 3: Operational roles (reception, housekeeping, maintenance, staff) are NOT allowed to see hotels
+        if (role == UserRoles.Staff || role == UserRoles.Reception ||
+            role == UserRoles.Housekeeping || role == UserRoles.Maintenance)
+        {
+            return Forbid();
+        }
+
+        // GUEST: allowed to see all hotels for browsing
+        if (role == UserRoles.Guest)
+        {
+            var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
+            var resources = hotels.Select(HotelResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(resources);
+        }
+
+        return Forbid();
     }
 
     /// <summary>
@@ -147,5 +192,81 @@ public class HotelsController(
 
         var hotelResource = HotelResourceFromEntityAssembler.ToResourceFromEntity(deletedHotel);
         return Ok(hotelResource);
+    }
+
+    /// <summary>
+    ///     Retrieves operational metrics for a specific hotel.
+    ///     Only accessible by Admin (own hotel) or ChainAdmin (any hotel).
+    /// </summary>
+    /// <param name="hotelId">The unique identifier of the target hotel.</param>
+    /// <returns>A hotel metrics resource containing staff count, room totals, and room status breakdowns.</returns>
+    [HttpGet("{hotelId:int}/metrics")]
+    [Authorize(UserRoles.Admin, UserRoles.ChainAdmin)]
+    [SwaggerOperation(
+        Summary = "Get hotel operational metrics",
+        Description = "Returns a summary of operational KPIs including staff count, total rooms, and room status breakdowns. Access is isolated to the user's assigned hotel unless the user is ChainAdmin.",
+        OperationId = "GetHotelMetrics")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The hotel metrics were calculated successfully.", typeof(HotelMetricsResource))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "The authenticated identity cannot access metrics for this hotel.")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "No hotel matched the supplied identifier.")]
+    public async Task<IActionResult> GetHotelMetrics(int hotelId)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return Unauthorized();
+
+        var role = user.Role.Value?.ToLowerInvariant();
+
+        // ChainAdmin can see metrics for any hotel
+        if (role == UserRoles.ChainAdmin)
+        {
+            return await BuildMetricsResponse(hotelId);
+        }
+
+        // Admin: MUST validate that the requested hotelId matches their own
+        if (role == UserRoles.Admin)
+        {
+            if (user.HotelId == null || user.HotelId.Value != hotelId)
+                return Forbid();
+
+            return await BuildMetricsResponse(hotelId);
+        }
+
+        return Forbid();
+    }
+
+    private async Task<IActionResult> BuildMetricsResponse(int hotelId)
+    {
+        var hotel = await hotelQueryService.Handle(new GetHotelByIdQuery(hotelId));
+        if (hotel == null)
+            return NotFound();
+
+        // 1. Total staff assigned to this hotel (via IAM ACL to preserve bounded context isolation)
+        var totalStaff = await iamContextFacade.GetStaffCountByHotelIdAsync(hotelId);
+
+        // 2. All rooms for this hotel
+        var rooms = await roomQueryService.Handle(new GetRoomsByHotelIdQuery(hotelId));
+        var roomsList = rooms.ToList();
+        var totalRooms = roomsList.Count;
+
+        // 3. Rooms grouped by status
+        var cleanRooms = roomsList.Count(r => r.Status == "Clean");
+        var dirtyRooms = roomsList.Count(r => r.Status == "Dirty");
+        var maintenanceRooms = roomsList.Count(r => r.Status == "Maintenance");
+        var reservedRooms = roomsList.Count(r => r.Status == "Reserved");
+
+        var metrics = new HotelMetricsResource(
+            hotelId,
+            hotel.Name,
+            totalStaff,
+            totalRooms,
+            cleanRooms,
+            dirtyRooms,
+            maintenanceRooms,
+            reservedRooms
+        );
+
+        return Ok(metrics);
     }
 }

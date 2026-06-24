@@ -15,7 +15,8 @@ public static class UpdateRoomCommandFromResourceAssembler
             resource.RoomTypeId,
             resource.Price,
             resource.Description,
-            resource.Amenities
+            resource.Amenities,
+            resource.Status
         );
     }
 }

@@ -90,6 +90,7 @@ public static class ModelBuilderExtensions
         builder.Entity<Room>().HasKey(r => r.Id);
         builder.Entity<Room>().Property(r => r.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<Room>().Property(r => r.Description).IsRequired().HasMaxLength(1000);
+        builder.Entity<Room>().Property(r => r.Status).IsRequired().HasMaxLength(50);
         
         // Monetary value configuration (Precision, Scale)
         builder.Entity<Room>().Property(r => r.Price)
@@ -162,7 +163,8 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 1,
                 Price = 85.00m,
                 Description = "Room 101 - Standard view.",
-                Amenities = new List<string> { "Wifi", "TV" }
+                Amenities = new List<string> { "Wifi", "TV" },
+                Status = "Clean"
             },
             new {
                 Id = 102,
@@ -170,7 +172,8 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 2,
                 Price = 150.00m,
                 Description = "Room 102 - Plaza view with balcony.",
-                Amenities = new List<string> { "Wifi", "TV", "Minibar" }
+                Amenities = new List<string> { "Wifi", "TV", "Minibar" },
+                Status = "Clean"
             },
             // Rooms for Hotel 2 (Cusco)
             new {
@@ -179,7 +182,8 @@ public static class ModelBuilderExtensions
                 RoomTypeId = 3,
                 Price = 320.00m,
                 Description = "Suite 201 - Panoramic mountain view.",
-                Amenities = new List<string> { "Jacuzzi", "Wifi", "Desayuno", "Chimenea" }
+                Amenities = new List<string> { "Jacuzzi", "Wifi", "Desayuno", "Chimenea" },
+                Status = "Dirty"
             }
         );
     }

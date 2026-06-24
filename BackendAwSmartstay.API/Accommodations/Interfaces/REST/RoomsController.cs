@@ -4,6 +4,7 @@ using BackendAwSmartstay.API.Accommodations.Domain.Model.Queries;
 using BackendAwSmartstay.API.Accommodations.Domain.Services;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Resources;
 using BackendAwSmartstay.API.Accommodations.Interfaces.REST.Transform;
+using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
 using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -80,16 +81,49 @@ public class RoomsController(
     [Authorize(UserRoles.Guest, UserRoles.Admin, UserRoles.ChainAdmin)]
     [SwaggerOperation(
         Summary = "Get all registered rooms",
-        Description = "Retrieves all room aggregate node instances across properties and transforms them into view resources.",
+        Description = "Retrieves room aggregates. ChainAdmin sees all rooms; Admin and operational staff see only rooms belonging to their assigned hotel.",
         OperationId = "GetAllRooms")]
     [SwaggerResponse(StatusCodes.Status200OK, "The room resource list was fetched successfully.", typeof(IEnumerable<RoomResource>))]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "The authenticated identity has insufficient privilege levels.")]
     public async Task<IActionResult> GetAllRooms()
     {
-        var rooms = await roomQueryService.Handle(new GetAllRoomsQuery());
-        var roomResources = rooms.Select(RoomResourceFromEntityAssembler.ToResourceFromEntity);
-        return Ok(roomResources);
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return Unauthorized();
+
+        var role = user.Role.Value?.ToLowerInvariant();
+
+        // ChainAdmin sees all rooms
+        if (role == UserRoles.ChainAdmin)
+        {
+            var rooms = await roomQueryService.Handle(new GetAllRoomsQuery());
+            var roomResources = rooms.Select(RoomResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(roomResources);
+        }
+
+        // Admin and operational staff: MUST filter by their assigned hotelId
+        if (role == UserRoles.Admin || role == UserRoles.Staff ||
+            role == UserRoles.Reception || role == UserRoles.Housekeeping ||
+            role == UserRoles.Maintenance)
+        {
+            if (user.HotelId == null)
+                return Forbid();
+
+            var rooms = await roomQueryService.Handle(new GetRoomsByHotelIdQuery(user.HotelId.Value));
+            var roomResources = rooms.Select(RoomResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(roomResources);
+        }
+
+        // Guest: sees all rooms for browsing
+        if (role == UserRoles.Guest)
+        {
+            var rooms = await roomQueryService.Handle(new GetAllRoomsQuery());
+            var roomResources = rooms.Select(RoomResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(roomResources);
+        }
+
+        return Forbid();
     }
     
     /// <summary>

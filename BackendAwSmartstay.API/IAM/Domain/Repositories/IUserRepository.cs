@@ -25,4 +25,9 @@ public interface IUserRepository : IBaseRepository<User>
     ///     Counts the number of active users that have a specific role.
     /// </summary>
     Task<int> CountActiveByRoleAsync(string role);
+
+    /// <summary>
+    ///     Counts the number of active users assigned to a specific hotel.
+    /// </summary>
+    Task<int> CountByHotelIdAsync(int hotelId);
 }

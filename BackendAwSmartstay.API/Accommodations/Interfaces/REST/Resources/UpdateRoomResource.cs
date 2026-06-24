@@ -10,5 +10,6 @@ public record UpdateRoomResource(
     [Required] int RoomTypeId,
     [Required] decimal Price,
     [Required] string Description,
-    List<string> Amenities
+    List<string> Amenities,
+    string Status
 );

@@ -33,7 +33,8 @@ public class RoomCommandService(
             command.RoomTypeId,
             command.Price,
             command.Description,
-            command.Amenities
+            command.Amenities,
+            command.Status
         );
 
         roomRepository.Update(room);

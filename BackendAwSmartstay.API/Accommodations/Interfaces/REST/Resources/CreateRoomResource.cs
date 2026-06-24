@@ -5,5 +5,6 @@ public record CreateRoomResource(
     int RoomTypeId, 
     decimal Price, 
     string Description, 
-    List<string> Amenities
+    List<string> Amenities,
+    string Status
 );

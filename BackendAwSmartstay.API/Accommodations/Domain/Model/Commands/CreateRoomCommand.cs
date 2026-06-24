@@ -14,5 +14,6 @@ public record CreateRoomCommand(
     int RoomTypeId, 
     decimal Price, 
     string Description, 
-    List<string> Amenities
+    List<string> Amenities,
+    string Status
 );

@@ -12,7 +12,8 @@ public static class CreateRoomCommandFromResourceAssembler
             resource.RoomTypeId,
             resource.Price,
             resource.Description,
-            resource.Amenities
+            resource.Amenities,
+            resource.Status
         );
     }
 }

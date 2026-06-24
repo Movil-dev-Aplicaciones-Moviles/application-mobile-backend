@@ -42,8 +42,12 @@ public class RoomQueryService(IRoomRepository roomRepository)
         /// <returns>A filtered collection of <see cref="Room"/> that match the requested type.</returns>
         var rooms = await roomRepository.ListAsync();
         return rooms.Where(r => r.RoomTypeId == query.RoomTypeId);
-    }        
+    }
 
- 
+    public async Task<IEnumerable<Room>> Handle(GetRoomsByHotelIdQuery query)
+    {
+        var rooms = await roomRepository.ListAsync();
+        return rooms.Where(r => r.HotelId == query.HotelId);
+    }
 }
 

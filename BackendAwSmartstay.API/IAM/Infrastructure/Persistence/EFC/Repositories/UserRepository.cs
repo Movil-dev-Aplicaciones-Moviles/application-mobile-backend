@@ -28,4 +28,10 @@ public class UserRepository(AppDbContext context) : BaseRepository<User>(context
         return await Context.Set<User>()
             .CountAsync(user => user.Role == roleVo && user.Status == UserStatus.Active);
     }
+
+    public async Task<int> CountByHotelIdAsync(int hotelId)
+    {
+        return await Context.Set<User>()
+            .CountAsync(user => user.HotelId == hotelId && user.Status == UserStatus.Active);
+    }
 }

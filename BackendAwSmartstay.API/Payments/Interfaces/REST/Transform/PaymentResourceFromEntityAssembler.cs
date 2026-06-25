@@ -11,9 +11,9 @@ public static class PaymentResourceFromEntityAssembler
             entity.Id,
             entity.BookingId,
             entity.TransactionId,
-            entity.Amount,
+            entity.AmountRecord.Amount,
             entity.Status.ToString(),
-            entity.CardNumberMasked,
+            entity.Card.MaskedNumber,
             entity.PaymentDate.ToString("yyyy-MM-dd HH:mm:ss")
         );
     }

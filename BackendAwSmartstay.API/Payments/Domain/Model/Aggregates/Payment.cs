@@ -1,4 +1,6 @@
 using BackendAwSmartstay.API.Payments.Domain.Model.Commands;
+using BackendAwSmartstay.API.Payments.Domain.Model.Events;
+using BackendAwSmartstay.API.Payments.Domain.Model.ValueObjects;
 
 namespace BackendAwSmartstay.API.Payments.Domain.Model.Aggregates;
 
@@ -12,8 +14,8 @@ public partial class Payment
     {
         TransactionId = Guid.NewGuid().ToString();
         PaymentMethod = string.Empty;
-        CardHolderName = string.Empty;
-        CardNumberMasked = string.Empty;
+        AmountRecord = null!;
+        Card = null!;
         Status = PaymentStatus.Pending;
         PaymentDate = DateTime.UtcNow;
     }
@@ -21,13 +23,13 @@ public partial class Payment
     public Payment(ProcessPaymentCommand command) : this()
     {
         BookingId = command.BookingId;
-        Amount = command.Amount;
+        AmountRecord = new Money(command.Amount);
         PaymentMethod = command.PaymentMethod; // e.g., "Credit Card"
-        CardHolderName = command.CardHolderName;
-        // Solo guardamos los últimos 4 dígitos por seguridad (PCI Compliance simulado)
-        CardNumberMasked = command.CardNumber.Length > 4 
-            ? "**** **** **** " + command.CardNumber.Substring(command.CardNumber.Length - 4) 
-            : "****";
+        Card = new CreditCard(
+            command.CardNumber,
+            command.CardHolderName,
+            command.ExpirationDate,
+            command.Cvv);
     }
 
     /// <summary>
@@ -46,9 +48,9 @@ public partial class Payment
     public string TransactionId { get; private set; } // UUID único de la transacción
 
     /// <summary>
-    /// The amount of the payment.
+    /// The monetary amount of the payment, encapsulated in a <see cref="Money"/> Value Object.
     /// </summary>
-    public decimal Amount { get; private set; }
+    public Money AmountRecord { get; private set; }
 
     /// <summary>
     /// The method used for the payment (e.g., Credit Card).
@@ -56,14 +58,10 @@ public partial class Payment
     public string PaymentMethod { get; private set; }
 
     /// <summary>
-    /// The name of the card holder.
+    /// The credit card information, encapsulated in a <see cref="CreditCard"/> Value Object.
+    /// Contains the masked card number and card holder name.
     /// </summary>
-    public string CardHolderName { get; private set; }
-
-    /// <summary>
-    /// The masked credit card number for security.
-    /// </summary>
-    public string CardNumberMasked { get; private set; }
+    public CreditCard Card { get; private set; }
 
     /// <summary>
     /// The date when the payment was processed.
@@ -76,11 +74,12 @@ public partial class Payment
     public PaymentStatus Status { get; private set; }
 
     /// <summary>
-    /// Marks the payment as successfully completed.
+    /// Marks the payment as successfully completed and emits a <see cref="PaymentCompletedEvent"/>.
     /// </summary>
     public void Complete()
     {
         Status = PaymentStatus.Completed;
+        AddDomainEvent(new PaymentCompletedEvent(Id, BookingId));
     }
 
     /// <summary>

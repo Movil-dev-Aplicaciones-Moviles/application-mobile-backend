@@ -6,6 +6,7 @@ using BackendAwSmartstay.API.Bookings.Infrastructure.Persistence.EFC.Configurati
 using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using BackendAwSmartstay.API.Payments.Domain.Model.Aggregates;
+using BackendAwSmartstay.API.Payments.Domain.Model.Entities;
 using BackendAwSmartstay.API.Payments.Infrastructure.Persistence.EFC.Configuration.Extensions;
 using BackendAwSmartstay.API.Profiles.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.Profiles.Infrastructure.Persistence.EFC.Configuration.Extensions;
@@ -84,6 +85,11 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     /// Gets or sets the set of Payment aggregates.
     /// </summary>
     public DbSet<Payment> Payments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the set of GuestFolio aggregates.
+    /// </summary>
+    public DbSet<GuestFolio> GuestFolios { get; set; }
 
     #endregion
 

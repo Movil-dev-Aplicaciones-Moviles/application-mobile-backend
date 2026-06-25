@@ -21,7 +21,7 @@ public class AnalyticsRepository(AppDbContext context) : IAnalyticsRepository
         // Assuming we look at Payments for confirmed revenue
         var totalRevenue = await context.Set<Payments.Domain.Model.Aggregates.Payment>()
             .Where(p => p.PaymentDate >= startOfMonth && p.PaymentDate <= endOfMonth && p.Status == Payments.Domain.Model.Aggregates.PaymentStatus.Completed)
-            .SumAsync(p => p.Amount);
+            .SumAsync(p => p.AmountRecord.Amount);
 
         // 2. Booking Stats
         var bookingsQuery = context.Set<Booking>()

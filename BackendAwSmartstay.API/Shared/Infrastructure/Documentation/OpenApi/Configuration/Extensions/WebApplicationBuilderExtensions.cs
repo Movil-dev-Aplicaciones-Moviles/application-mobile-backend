@@ -1,4 +1,4 @@
-﻿using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Models;
 
 namespace BackendAwSmartstay.API.Shared.Infrastructure.Documentation.OpenApi.Configuration.Extensions;
 
@@ -36,7 +36,7 @@ public static class WebApplicationBuilderExtensions
                         Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0.html")
                     }
                 });
-            
+
             // Configure JWT Bearer authentication
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
@@ -47,7 +47,7 @@ public static class WebApplicationBuilderExtensions
                 BearerFormat = "JWT",
                 Scheme = "bearer"
             });
-            
+
             // Apply JWT authentication globally
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
@@ -63,19 +63,15 @@ public static class WebApplicationBuilderExtensions
                     Array.Empty<string>()
                 }
             });
-            
+
             options.EnableAnnotations();
         });
     }
 
     /// <summary>
-    /// Configures CORS policy to allow all origins, methods, and headers.
+    /// Configures CORS policy for production frontend and local development.
     /// </summary>
     /// <param name="builder">The web application builder instance.</param>
-    /// <remarks>
-    /// Warning: This policy allows unrestricted cross-origin access. 
-    /// Consider restricting origins in production environments.
-    /// </remarks>
     public static void AddCorsServices(this WebApplicationBuilder builder)
     {
         builder.Services.AddCors(options =>
@@ -83,7 +79,21 @@ public static class WebApplicationBuilderExtensions
             options.AddPolicy("AllowFrontend", policy =>
             {
                 policy
-                    .WithOrigins("https://smartstay-3cffc.web.app")
+                    .SetIsOriginAllowed(origin =>
+                    {
+                        if (string.IsNullOrWhiteSpace(origin))
+                            return false;
+
+                        if (origin.Equals("https://smartstay-3cffc.web.app", StringComparison.OrdinalIgnoreCase))
+                            return true;
+
+                        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                            return false;
+
+                        return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                               || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                               || uri.Host.Equals("0.0.0.0", StringComparison.OrdinalIgnoreCase);
+                    })
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();

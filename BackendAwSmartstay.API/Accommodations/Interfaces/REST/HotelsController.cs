@@ -59,7 +59,13 @@ public class HotelsController(
         if (role == UserRoles.ChainAdmin)
         {
             var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-            var resources = await Task.WhenAll(hotels.Select(h => BuildHotelResourceAsync(h)));
+            var resources = new List<HotelResource>();
+
+            // SOLUCIÓN CRÍTICA EF CORE: Iteración secuencial asíncrona para evitar hilos concurrentes compartiendo el mismo DbContext
+            foreach (var hotel in hotels)
+            {
+                resources.Add(await BuildHotelResourceAsync(hotel));
+            }
             return Ok(resources);
         }
 
@@ -88,7 +94,13 @@ public class HotelsController(
         if (role == UserRoles.Guest)
         {
             var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-            var resources = await Task.WhenAll(hotels.Select(h => BuildHotelResourceAsync(h)));
+            var resources = new List<HotelResource>();
+
+            // SOLUCIÓN CRÍTICA EF CORE: Mismo parche secuencial aplicado al scope de invitados
+            foreach (var hotel in hotels)
+            {
+                resources.Add(await BuildHotelResourceAsync(hotel));
+            }
             return Ok(resources);
         }
 

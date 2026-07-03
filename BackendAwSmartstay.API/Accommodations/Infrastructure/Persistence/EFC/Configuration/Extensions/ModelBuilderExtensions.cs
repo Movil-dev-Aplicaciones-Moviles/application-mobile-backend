@@ -199,7 +199,7 @@ public static class ModelBuilderExtensions
                 Price = 85.00m,
                 Description = "Room 101 - Standard view.",
                 Amenities = new List<string> { "Wifi", "TV" },
-                Status = "Clean"
+                Status = RoomStatus.Clean
             },
             new {
                 Id = 102,
@@ -208,7 +208,7 @@ public static class ModelBuilderExtensions
                 Price = 150.00m,
                 Description = "Room 102 - Plaza view with balcony.",
                 Amenities = new List<string> { "Wifi", "TV", "Minibar" },
-                Status = "Clean"
+                Status = RoomStatus.Clean
             },
             // Rooms for Hotel 2 (Cusco)
             new {
@@ -218,7 +218,7 @@ public static class ModelBuilderExtensions
                 Price = 320.00m,
                 Description = "Suite 201 - Panoramic mountain view.",
                 Amenities = new List<string> { "Jacuzzi", "Wifi", "Desayuno", "Chimenea" },
-                Status = "Dirty"
+                Status = RoomStatus.Dirty
             }
         );
     }

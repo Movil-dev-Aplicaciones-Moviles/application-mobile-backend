@@ -1,13 +1,14 @@
 ﻿using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
 using BackendAwSmartstay.API.IAM.Domain.Model.ValueObjects;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BackendAwSmartstay.API.IAM.Domain.Services;
 
 /// <summary>
 /// Implementation of role-hierarchy authorization rules.
 /// </summary>
-public class RoleAuthorizationService(IUserScopeService scopeService) : IRoleAuthorizationService
+public class RoleAuthorizationService(IServiceProvider serviceProvider) : IRoleAuthorizationService
 {
     public bool CanManage(User manager, User managed)
     {
@@ -21,6 +22,8 @@ public class RoleAuthorizationService(IUserScopeService scopeService) : IRoleAut
             return false;
 
         // Scope: manager must be allowed to access the target user's data
+        // Resolve IUserScopeService on-demand to break dependency injection circular loops
+        var scopeService = serviceProvider.GetRequiredService<IUserScopeService>();
         return scopeService.CanAccessUser(manager, managed);
     }
 

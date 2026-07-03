@@ -19,7 +19,7 @@ public record HotelResource(
     string Location,
     string ImageUrl,
     string Description,
-    decimal BasePrice,
+    decimal? BasePrice,
     string Type,
     List<string> Amenities
 );

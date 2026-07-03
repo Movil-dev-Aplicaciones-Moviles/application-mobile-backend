@@ -27,12 +27,10 @@ public class RequestAuthorizationMiddleware(
     ///     Executes the middleware logic for processing the token verification flow.
     /// </summary>
     /// <param name="context">The current <see cref="HttpContext"/> of the executing request.</param>
-    /// <param name="userQueryService">The domain query service used to retrieve user aggregates.</param>
     /// <param name="tokenService">The outbound service handling token parsing and validation.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task InvokeAsync(
         HttpContext context,
-        IUserQueryService userQueryService,
         ITokenService tokenService)
     {
         logger.LogDebug("Entering RequestAuthorizationMiddleware pipeline invocation.");
@@ -45,9 +43,9 @@ public class RequestAuthorizationMiddleware(
             return;
         }
         
-        var allowAnonymous = endpoint.Metadata.Any(metadata => 
-            metadata.GetType() == typeof(AllowAnonymousAttribute) ||
-            metadata is Microsoft.AspNetCore.Authorization.IAllowAnonymous);
+        var allowAnonymous = endpoint.Metadata.Any(m => 
+            m.GetType().Name == "AllowAnonymousAttribute" || 
+            m is Microsoft.AspNetCore.Authorization.IAllowAnonymous);
         
         if (allowAnonymous)
         {
@@ -74,52 +72,58 @@ public class RequestAuthorizationMiddleware(
             return;
         }
 
-        var getUserByIdQuery = new GetUserByIdQuery(userId.Value);
-        var user = await userQueryService.Handle(getUserByIdQuery);
-
-        if (user == null)
+        // Resolve the Scoped service on-demand to prevent Circular Dependency loops during anonymous flows.
+        using (var scope = context.RequestServices.CreateScope())
         {
-            logger.LogError("Critical Security Inconsistency: Token signature is valid for user ID {UserId}, but the corresponding User aggregate does not exist in the persistence layer.", userId.Value);
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
-            return;
+            var userQueryService = scope.ServiceProvider.GetRequiredService<IUserQueryService>();
+            
+            var getUserByIdQuery = new GetUserByIdQuery(userId.Value);
+            var user = await userQueryService.Handle(getUserByIdQuery);
+
+            if (user == null)
+            {
+                logger.LogError("Critical Security Inconsistency: Token signature is valid for user ID {UserId}, but the corresponding User aggregate does not exist in the persistence layer.", userId.Value);
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
+                return;
+            }
+
+            if (user.Status == UserStatus.Inactive)
+            {
+                logger.LogWarning("Authentication rejected: User ID {UserId} is inactive.", user.Id);
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("La cuenta ha sido desactivada. Contacte al administrador.");
+                return;
+            }
+
+            // --- Token version validation ---
+            var jwtReader = new JsonWebTokenHandler();
+            var jsonWebToken = jwtReader.ReadJsonWebToken(token);
+            var tokenVersionClaim = jsonWebToken.Claims.FirstOrDefault(c => c.Type == "token_version");
+
+            if (tokenVersionClaim == null || !int.TryParse(tokenVersionClaim.Value, out var tokenVersion))
+            {
+                logger.LogWarning("Token is missing 'token_version' claim for user ID {UserId}. Rejecting.", user.Id);
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
+                return;
+            }
+
+            if (tokenVersion != user.TokenVersion)
+            {
+                logger.LogWarning("Token version mismatch for user ID {UserId}: token={TokenVersion}, db={DbVersion}.", user.Id, tokenVersion, user.TokenVersion);
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
+                return;
+            }
+
+            logger.LogInformation("Successful identity verification for user ID: {UserId} with associated Role: {Role}.", user.Id, user.Role);
+            context.Items["User"] = user;
         }
-
-        if (user.Status == UserStatus.Inactive)
-        {
-            logger.LogWarning("Authentication rejected: User ID {UserId} is inactive.", user.Id);
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("La cuenta ha sido desactivada. Contacte al administrador.");
-            return;
-        }
-
-        // --- Token version validation ---
-        var jwtReader = new JsonWebTokenHandler();
-        var jsonWebToken = jwtReader.ReadJsonWebToken(token);
-        var tokenVersionClaim = jsonWebToken.Claims.FirstOrDefault(c => c.Type == "token_version");
-
-        if (tokenVersionClaim == null || !int.TryParse(tokenVersionClaim.Value, out var tokenVersion))
-        {
-            logger.LogWarning("Token is missing 'token_version' claim for user ID {UserId}. Rejecting.", user.Id);
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
-            return;
-        }
-
-        if (tokenVersion != user.TokenVersion)
-        {
-            logger.LogWarning("Token version mismatch for user ID {UserId}: token={TokenVersion}, db={DbVersion}.", user.Id, tokenVersion, user.TokenVersion);
-            context.Response.StatusCode = 401;
-            context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Token revocado. Inicie sesión nuevamente.");
-            return;
-        }
-
-        logger.LogInformation("Successful identity verification for user ID: {UserId} with associated Role: {Role}.", user.Id, user.Role);
-        context.Items["User"] = user;
 
         await next(context);
     }

@@ -11,7 +11,7 @@ namespace BackendAwSmartstay.API.Analytics.Infrastructure.Persistence.EFC.Reposi
 /// </summary>
 /// <remarks>
 /// This repository acts as a cross-context reader that queries information from multiple
-/// domain-bounded contexts (Payments, Bookings, and Accommodations) to build analytical aggregates.
+/// domain bounded contexts (Payments, Bookings, and Accommodations) to build analytical aggregates.
 /// </remarks>
 /// <param name="context">The database context instance for database operations.</param>
 public class AnalyticsRepository(AppDbContext context) : IAnalyticsRepository
@@ -22,7 +22,7 @@ public class AnalyticsRepository(AppDbContext context) : IAnalyticsRepository
     /// <remarks>
     /// Calculations are strictly bounded between the first second of the current month and the first second of the next month (exclusive) 
     /// using UTC time to prevent timezone shifts. 
-    /// Financial records are safely aggregated using decimal precision. Room occupancy calculations 
+    /// Financial records are safely aggregated directly via the root Value Object property conversion. Room occupancy calculations 
     /// are evaluated in memory to safeguard against division-by-zero exceptions in the database engine.
     /// </remarks>
     /// <returns>
@@ -34,10 +34,10 @@ public class AnalyticsRepository(AppDbContext context) : IAnalyticsRepository
         var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var nextMonth = startOfMonth.AddMonths(1);
 
-        // 1. Calculate Revenue safely using decimal precision for financial compliance
+        // 1. Calculate Revenue safely using decimal casting on the Root Value Object property to prevent Linq translation failures
         var totalRevenue = await context.Set<Payments.Domain.Model.Aggregates.Payment>()
             .Where(p => p.PaymentDate >= startOfMonth && p.PaymentDate < nextMonth && p.Status == Payments.Domain.Model.Aggregates.PaymentStatus.Completed)
-            .SumAsync(p => (decimal?)p.AmountRecord.Amount) ?? 0m;
+            .SumAsync(p => (decimal?)p.AmountRecord) ?? 0m;
 
         // 2. Base query for tracking bookings within the current monthly window
         var bookingsQuery = context.Set<Booking>()

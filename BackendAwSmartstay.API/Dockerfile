@@ -1,12 +1,22 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS builder
-WORKDIR /app
+
+WORKDIR /src
+
 COPY BackendAwSmartstay.API/*.csproj BackendAwSmartstay.API/
-RUN dotnet restore ./BackendAwSmartstay.API
+RUN dotnet restore BackendAwSmartstay.API/BackendAwSmartstay.API.csproj
+
 COPY . .
-RUN dotnet publish ./BackendAwSmartstay.API -c Release -o out
+
+RUN dotnet publish BackendAwSmartstay.API/BackendAwSmartstay.API.csproj \
+    -c Release \
+    -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
+
 WORKDIR /app
-COPY --from=builder /app/out .
-EXPOSE 80
+
+COPY --from=builder /app/publish .
+
+EXPOSE 8080
+
 ENTRYPOINT ["dotnet", "BackendAwSmartstay.API.dll"]

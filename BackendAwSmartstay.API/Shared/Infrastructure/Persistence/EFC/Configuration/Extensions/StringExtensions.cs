@@ -2,9 +2,16 @@
 
 namespace BackendAwSmartstay.API.Shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
+/// <summary>
+/// Provides extension methods for string manipulation, such as naming convention conversions.
+/// </summary>
 public static class StringExtensions
 {
-
+    /// <summary>
+    /// Converts a string to snake_case.
+    /// </summary>
+    /// <param name="text">The string to convert.</param>
+    /// <returns>The converted snake_case string.</returns>
     public static string ToSnakeCase(this string text)
     {
         return new string(Convert(text.GetEnumerator()).ToArray());

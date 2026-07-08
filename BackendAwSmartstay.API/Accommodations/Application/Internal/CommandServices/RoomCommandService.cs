@@ -41,13 +41,21 @@ public class RoomCommandService(
         return room;
     }
 
-    public async Task<Room?> Handle(DeleteRoomCommand command)
-    {
-        var room = await roomRepository.FindByIdAsync(command.Id);
-        if (room is null) return null;
+public async Task<Room?> Handle(DeleteRoomCommand command)
+{
+    // Find the room by its identifier
+    var room = await roomRepository.FindByIdAsync(command.Id);
 
-        roomRepository.Remove(room);
-        await unitOfWork.CompleteAsync();
-        return room;
-    }
+    // Return null if the room does not exist
+    if (room is null) return null;
+
+    // Remove the room from the repository
+    roomRepository.Remove(room);
+
+    // Save the changes to the database
+    await unitOfWork.CompleteAsync();
+
+    // Return the deleted room
+    return room;
+}
 }

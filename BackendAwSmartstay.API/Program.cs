@@ -32,6 +32,7 @@ builder.AddOpenApiConfigurationServices();
 // CORS
 builder.AddCorsServices();
 
+ 
 // DI / Contextos
 builder.AddSharedContextServices();
 builder.AddAccommodationsContextServices();

@@ -2,9 +2,16 @@
 
 namespace BackendAwSmartstay.API.Shared.Infrastructure.Persistence.EFC.Configuration.Extensions;
 
+/// <summary>
+/// Provides extension methods for <see cref="ModelBuilder"/> to configure database naming conventions.
+/// </summary>
 public static class ModelBuilderExtensions
 {
-
+    /// <summary>
+    /// Applies snake_case naming conventions to all tables, columns, keys, foreign keys, and indexes in the model.
+    /// It also pluralizes table names.
+    /// </summary>
+    /// <param name="builder">The <see cref="ModelBuilder"/> instance.</param>
     public static void UseSnakeCaseNamingConvention(this ModelBuilder builder)
     {
         foreach (var entity in builder.Model.GetEntityTypes())

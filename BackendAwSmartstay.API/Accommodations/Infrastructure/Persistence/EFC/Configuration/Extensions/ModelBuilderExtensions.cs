@@ -171,7 +171,7 @@ public static class ModelBuilderExtensions
                 City = "Lima",
                 Country = "Peru",
                 Description = "Historic hotel in the center of Lima.",
-                ImageUrl = "https://placehold.co/600x400/3498DB/FFFFFF?text=Bolivar",
+                ImageUrl = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80",
                 Type = "Hotel",
                 Amenities = new List<string> { "Wifi", "Restaurante", "Bar" }
             },
@@ -183,7 +183,7 @@ public static class ModelBuilderExtensions
                 City = "Cusco",
                 Country = "Peru",
                 Description = "Experience the mystic energy of the Andes.",
-                ImageUrl = "https://placehold.co/600x400/E67E22/FFFFFF?text=Andean",
+                ImageUrl = "https://images.unsplash.com/photo-1531968455001-5c5272a41129?auto=format&fit=crop&w=1200&q=80",
                 Type = "Lodge",
                 Amenities = new List<string> { "Desayuno", "Wifi", "Gimnasio" }
             }

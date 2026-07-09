@@ -39,10 +39,10 @@ public class HotelsController(
     /// </remarks>
     /// <returns>An asynchronous action result containing an enumerable collection of hotel representations.</returns>
     [HttpGet]
-    [Authorize(UserRoles.Guest, UserRoles.Admin, UserRoles.ChainAdmin)]
+    [AllowAnonymous]
     [SwaggerOperation(
         Summary = "Get all hotels",
-        Description = "Retrieves hotel aggregates based on role-based data isolation. ChainAdmin sees all hotels; Admin sees only their assigned hotel; operational roles are denied.",
+        Description = "Retrieves public hotel catalog data for client browsing. Authenticated admin users still keep scoped access rules.",
         OperationId = "GetAllHotels")]
     [SwaggerResponse(StatusCodes.Status200OK, "The hotel resource list was successfully fetched.", typeof(IEnumerable<HotelResource>))]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
@@ -50,26 +50,25 @@ public class HotelsController(
     public async Task<IActionResult> GetAllHotels()
     {
         var user = HttpContext.Items["User"] as User;
-        if (user == null)
-            return Unauthorized();
 
-        var role = user.Role.Value?.ToLowerInvariant();
-
-        // REGLA 1: ChainAdmin sees all hotels
-        if (role == UserRoles.ChainAdmin)
+        // Public client browsing: visitors can see the catalog without signing in.
+        if (user == null || string.Equals(user.Role.Value, UserRoles.Guest, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(user.Role.Value, UserRoles.ChainAdmin, StringComparison.OrdinalIgnoreCase))
         {
             var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
             var resources = new List<HotelResource>();
 
-            // SOLUCIÓN CRÍTICA EF CORE: Iteración secuencial asíncrona para evitar hilos concurrentes compartiendo el mismo DbContext
             foreach (var hotel in hotels)
             {
                 resources.Add(await BuildHotelResourceAsync(hotel));
             }
+
             return Ok(resources);
         }
 
-        // REGLA 2: Admin sees only their assigned hotel
+        var role = user.Role.Value?.ToLowerInvariant();
+
+        // Admin sees only their assigned hotel.
         if (role == UserRoles.Admin)
         {
             if (user.HotelId == null)
@@ -83,27 +82,6 @@ public class HotelsController(
             return Ok(new List<HotelResource> { resource });
         }
 
-        // REGLA 3: Operational roles (reception, housekeeping, maintenance, staff) are NOT allowed to see hotels
-        if (role == UserRoles.Staff || role == UserRoles.Reception ||
-            role == UserRoles.Housekeeping || role == UserRoles.Maintenance)
-        {
-            return Forbid();
-        }
-
-        // GUEST: allowed to see all hotels for browsing
-        if (role == UserRoles.Guest)
-        {
-            var hotels = await hotelQueryService.Handle(new GetAllHotelsQuery());
-            var resources = new List<HotelResource>();
-
-            // SOLUCIÓN CRÍTICA EF CORE: Mismo parche secuencial aplicado al scope de invitados
-            foreach (var hotel in hotels)
-            {
-                resources.Add(await BuildHotelResourceAsync(hotel));
-            }
-            return Ok(resources);
-        }
-
         return Forbid();
     }
 
@@ -113,7 +91,7 @@ public class HotelsController(
     /// <param name="hotelId">The structural domain identity number of the hotel target aggregate.</param>
     /// <returns>The matching hotel representation resource context, or NotFound.</returns>
     [HttpGet("{hotelId:int}")]
-    [Authorize(UserRoles.Guest, UserRoles.Admin, UserRoles.ChainAdmin)]
+    [AllowAnonymous]
     [SwaggerOperation(
         Summary = "Get hotel by its unique identifier",
         Description = "Retrieves structural property details for a single hotel aggregate from its domain identifier.",
@@ -128,6 +106,29 @@ public class HotelsController(
         if (hotel is null) return NotFound();
         var resource = await BuildHotelResourceAsync(hotel);
         return Ok(resource);
+    }
+
+    /// <summary>
+    ///     Retrieves public rooms belonging to a specific hotel.
+    /// </summary>
+    /// <param name="hotelId">The hotel identifier.</param>
+    /// <returns>A list of room resources for the selected hotel.</returns>
+    [HttpGet("{hotelId:int}/rooms")]
+    [AllowAnonymous]
+    [SwaggerOperation(
+        Summary = "Get rooms by hotel",
+        Description = "Retrieves rooms for a hotel so the client app can display hotel details without requiring sign-in.",
+        OperationId = "GetRoomsByHotel")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The hotel rooms were fetched successfully.", typeof(IEnumerable<RoomResource>))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "No hotel matched the supplied identifier.")]
+    public async Task<IActionResult> GetRoomsByHotel(int hotelId)
+    {
+        var hotel = await hotelQueryService.Handle(new GetHotelByIdQuery(hotelId));
+        if (hotel is null) return NotFound();
+
+        var rooms = await roomQueryService.Handle(new GetRoomsByHotelIdQuery(hotelId));
+        var resources = rooms.Select(RoomResourceFromEntityAssembler.ToResourceFromEntity);
+        return Ok(resources);
     }
 
     /// <summary>

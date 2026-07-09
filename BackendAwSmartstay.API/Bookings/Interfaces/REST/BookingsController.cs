@@ -4,6 +4,7 @@ using BackendAwSmartstay.API.Bookings.Domain.Model.Queries;
 using BackendAwSmartstay.API.Bookings.Domain.Services;
 using BackendAwSmartstay.API.Bookings.Interfaces.REST.Resources;
 using BackendAwSmartstay.API.Bookings.Interfaces.REST.Transform;
+using BackendAwSmartstay.API.IAM.Domain.Model.Aggregates;
 using BackendAwSmartstay.API.IAM.Domain.Model.Constants;
 using BackendAwSmartstay.API.IAM.Infrastructure.Pipeline.Middleware.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -74,6 +75,42 @@ public class BookingsController(
         return CreatedAtAction(nameof(GetBookingById), new { bookingId = booking.Id }, bookingResource);
     }
     
+    /// <summary>
+    ///     Retrieves the authenticated guest booking history.
+    /// </summary>
+    /// <returns>The booking list that belongs to the signed-in guest.</returns>
+    [HttpGet("me")]
+    [Authorize(UserRoles.Guest, UserRoles.Admin, UserRoles.ChainAdmin)]
+    [SwaggerOperation(
+        Summary = "Get my bookings",
+        Description = "Retrieves reservation history for the authenticated guest. Admin and ChainAdmin still receive the full list for compatibility.",
+        OperationId = "GetMyBookings")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The booking list was successfully fetched.", typeof(IEnumerable<BookingResource>))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
+    public async Task<IActionResult> GetMyBookings()
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return Unauthorized();
+
+        var bookings = await bookingQueryService.Handle(new GetAllBookingsQuery());
+        var role = user.Role.Value?.ToLowerInvariant();
+
+        if (role == UserRoles.Admin || role == UserRoles.ChainAdmin)
+        {
+            var adminResources = bookings.Select(BookingResourceFromEntityAssembler.ToResourceFromEntity);
+            return Ok(adminResources);
+        }
+
+        var username = user.Username.Value;
+        var guestBookings = bookings
+            .Where(booking => string.Equals(booking.GuestEmail, username, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(booking => booking.CheckInDate)
+            .Select(BookingResourceFromEntityAssembler.ToResourceFromEntity);
+
+        return Ok(guestBookings);
+    }
+
     /// <summary>
     ///     Retrieves an enumerable collection mapping all registered booking aggregate resources in the persistence subsystem.
     /// </summary>
@@ -159,6 +196,42 @@ public class BookingsController(
         var cancelBookingCommand = new CancelBookingCommand(bookingId);
         var booking = await bookingCommandService.Handle(cancelBookingCommand);
         if (booking is null) return NotFound();
+        var bookingResource = BookingResourceFromEntityAssembler.ToResourceFromEntity(booking);
+        return Ok(bookingResource);
+    }
+
+    /// <summary>
+    ///     Allows the authenticated guest to cancel one of their own bookings.
+    /// </summary>
+    /// <param name="bookingId">The booking identifier.</param>
+    /// <returns>The updated booking resource.</returns>
+    [HttpPost("{bookingId:int}/cancel-by-guest")]
+    [Authorize(UserRoles.Guest)]
+    [SwaggerOperation(
+        Summary = "Cancel my booking",
+        Description = "Cancels a booking only when it belongs to the authenticated guest.",
+        OperationId = "CancelBookingByGuest")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The booking was cancelled successfully.", typeof(BookingResource))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, "The request lacks a valid identity identification token.")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "The booking does not belong to the authenticated guest.")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "The booking was not found.")]
+    public async Task<IActionResult> CancelBookingByGuest(int bookingId)
+    {
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+            return Unauthorized();
+
+        var existingBooking = await bookingQueryService.Handle(new GetBookingByIdQuery(bookingId));
+        if (existingBooking is null)
+            return NotFound();
+
+        if (!string.Equals(existingBooking.GuestEmail, user.Username.Value, StringComparison.OrdinalIgnoreCase))
+            return Forbid();
+
+        var cancelBookingCommand = new CancelBookingCommand(bookingId);
+        var booking = await bookingCommandService.Handle(cancelBookingCommand);
+        if (booking is null) return NotFound();
+
         var bookingResource = BookingResourceFromEntityAssembler.ToResourceFromEntity(booking);
         return Ok(bookingResource);
     }

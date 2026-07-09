@@ -21,12 +21,30 @@ public static class HotelResourceFromEntityAssembler
             entity.Id,
             entity.HostId,
             entity.Name,
-            locationDisplay, 
-            entity.ImageUrl,
+            locationDisplay,
+            ResolvePublicImageUrl(entity),
             entity.Description,
             lowestPrice,
             entity.Type,
             entity.Amenities
         );
+    }
+
+    /// <summary>
+    /// Returns a public image URL suitable for the client app.
+    /// If the database still contains old placeholder images, the API response uses a realistic image instead.
+    /// This avoids requiring a database migration just to improve the visual catalog.
+    /// </summary>
+    private static string ResolvePublicImageUrl(Hotel entity)
+    {
+        if (!string.IsNullOrWhiteSpace(entity.ImageUrl) &&
+            !entity.ImageUrl.Contains("placehold.co", StringComparison.OrdinalIgnoreCase))
+        {
+            return entity.ImageUrl;
+        }
+
+        return entity.Name.ToLowerInvariant().Contains("cusco")
+            ? "https://images.unsplash.com/photo-1531968455001-5c5272a41129?auto=format&fit=crop&w=1200&q=80"
+            : "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80";
     }
 }

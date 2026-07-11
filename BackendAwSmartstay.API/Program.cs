@@ -15,6 +15,7 @@ using BackendAwSmartstay.API.Shared.Infrastructure.Persistence.EFC.Configuration
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using BackendAwSmartstay.API.Shared.Infrastructure.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,7 @@ builder.AddPaymentsContextServices();
 builder.AddIamContextServices();
 builder.AddProfilesContextServices();
 builder.AddAnalyticsContextServices();
+builder.Services.AddSingleton<ActiveMqProducer>();
 
 // Mediator for Services
 builder.AddCortexMediatorServices();
